@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#C9DDEB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reading">
+<link rel="manifest" href="manifest.json">
+<title>Reading Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+  // ─────────────────────────────────────────────────────
+  // 🔧 SCHRITT 1: DEINE FIREBASE CONFIG HIER EINFÜGEN
+  // ─────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyD3FVnncEvI6F2JuAptLgClI3Ey_TlmcOw",
+  authDomain: "reading-tracker-5e5b2.firebaseapp.com",
+  databaseURL: "https://reading-tracker-5e5b2-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "reading-tracker-5e5b2",
+  storageBucket: "reading-tracker-5e5b2.firebasestorage.app",
+  messagingSenderId: "171458601480",
+  appId: "1:171458601480:web:d2efb45c33840b8365a7bd"
+};
+  // ─────────────────────────────────────────────────────
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  function setStatus(msg, color='var(--muted)'){
+    const el=document.getElementById('sync-status');
+    if(el){el.textContent=msg;el.style.color=color;}
+  }
+
+  async function loadFromFirebase(){
+    setStatus('⟳ Verbinde…');
+    try{
+      const snap=await get(ref(db,'tracker'));
+      if(snap.exists()){
+        window._state=snap.val();
+        if(!window._state.nextId){
+          const mx=Math.max(0,...(window._state.books||[]).map(b=>b.id||0));
+          window._state.nextId=mx+1;
+        }
+      } else {
+        window._state=window._defaultData();
+        await set(ref(db,'tracker'),window._state);
+      }
+      setStatus('✓ Synchronisiert','var(--success)');
+      setTimeout(()=>setStatus(''),3000);
+    } catch(e){
+      console.error(e);
+      setStatus('⚠ Offline – lokale Daten','var(--accent)');
+      try{window._state=JSON.parse(localStorage.getItem('reading_tracker_v3'))||window._defaultData();}
+      catch{window._state=window._defaultData();}
+    }
+    window._firebaseReady=true;
+    window.initApp();
+  }
+
+  function startRealtimeSync(){
+    onValue(ref(db,'tracker'),(snap)=>{
+      if(!snap.exists())return;
+      const remote=snap.val();
+      if(JSON.stringify(remote)!==JSON.stringify(window._state)){
+        window._state=remote;
+        if(!window._state.nextId)window._state.nextId=100;
+        setStatus('↻ Aktualisiert','#3a7090');
+        setTimeout(()=>setStatus(''),2000);
+        if(window.refreshAll)window.refreshAll();
+      }
+    });
+  }
+
+  window.saveToFirebase=async function(){
+    if(!window._firebaseReady)return;
+    setStatus('⟳ Speichert…');
+    try{
+      localStorage.setItem('reading_tracker_v3',JSON.stringify(window._state));
+      await set(ref(db,'tracker'),window._state);
+      setStatus('✓ Gespeichert','var(--success)');
+      setTimeout(()=>setStatus(''),2000);
+    } catch(e){
+      setStatus('⚠ Nur lokal','var(--accent)');
+      setTimeout(()=>setStatus(''),3000);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    loadFromFirebase().then(startRealtimeSync);
+  });
+</script>
+<style>
+  :root{--ink:#1a1208;--paper:#f5f0e8;--cream:#ede8d8;--accent:#c8402a;--gold:#b8860b;--muted:#7a7060;--border:#d4ccb8;--success:#4a7c59;--card:#faf8f3;--sky:#C9DDEB;--sky-dark:#a8c4d8;--sky-light:#e8f2f8;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;}
+  #loading-screen{position:fixed;inset:0;background:var(--sky);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
+  #loading-screen h2{font-family:'Playfair Display',serif;font-size:2rem;}
+  #loading-screen h2 span{color:var(--accent);font-style:italic;}
+  .spinner{width:36px;height:36px;border:3px solid var(--sky-dark);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loading-screen p{font-family:'DM Mono',monospace;font-size:0.75rem;color:#4a6070;}
+  #offline-banner{display:none;background:#fff3cd;border-bottom:1px solid #ffc107;padding:0.4rem 1rem;text-align:center;font-family:'DM Mono',monospace;font-size:0.72rem;color:#664d03;}
+  header{background:var(--sky);padding:1.4rem 1.5rem 1.1rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;border-bottom:3px solid var(--sky-dark);}
+  header h1{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,5vw,2.2rem);letter-spacing:-0.02em;line-height:1;}
+  header h1 span{color:var(--accent);font-style:italic;}
+  .hdr-right{text-align:right;}
+  .hdr-year{font-family:'Playfair Display',serif;font-size:1.3rem;line-height:1;}
+  .hdr-date{font-family:'DM Mono',monospace;font-size:0.68rem;color:#4a6070;}
+  #sync-status{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);min-height:1em;}
+  nav{background:var(--sky-light);border-bottom:1px solid var(--sky-dark);display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:10;}
+  nav::-webkit-scrollbar{display:none;}
+  nav button{font-family:'DM Mono',monospace;font-size:0.67rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.8rem 1rem;border:none;background:transparent;color:#5a7888;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.2s;flex-shrink:0;}
+  nav button.active{color:var(--ink);border-bottom-color:var(--accent);background:var(--paper);}
+  nav button:hover:not(.active){color:var(--ink);}
+  main{padding:1.2rem 1.2rem 5rem;max-width:900px;margin:0 auto;}
+  .tab-content{display:none;} .tab-content.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1.1rem;}
+  .card-sky{background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:6px;padding:1.1rem;}
+  .card-title{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem;}
+  .big-number{font-family:'Playfair Display',serif;font-size:2rem;line-height:1;color:var(--ink);}
+  .big-number.accent{color:var(--accent);} .big-number.gold{color:var(--gold);} .big-number.sky{color:#3a7090;}
+  .sub{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;}
+  .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.7rem;margin-bottom:1.3rem;}
+  @media(min-width:480px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
+  .progress-wrap{margin:0.65rem 0 0.25rem;}
+  .progress-track{height:5px;background:var(--cream);border-radius:3px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width 0.5s ease;}
+  .progress-fill.gold{background:var(--gold);} .progress-fill.sky{background:var(--sky-dark);}
+  .progress-labels{display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:0.2rem;}
+  .goal-grid{display:grid;grid-template-columns:1fr;gap:0.9rem;margin-bottom:1.2rem;}
+  @media(min-width:560px){.goal-grid{grid-template-columns:1fr 1fr;}}
+  .input-row{display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem;flex-wrap:wrap;}
+  .input-row input,.input-row select{font-family:'DM Mono',monospace;font-size:0.83rem;padding:0.48rem 0.6rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:5px;flex:1;min-width:65px;-webkit-appearance:none;}
+  .input-row input:focus,.input-row select:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
+  .btn{font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.05em;text-transform:uppercase;padding:0.5rem 0.9rem;border:none;cursor:pointer;border-radius:5px;transition:all 0.15s;white-space:nowrap;touch-action:manipulation;}
+  .btn-primary{background:var(--ink);color:var(--paper);} .btn-primary:active{background:var(--accent);}
+  .btn-sky{background:var(--sky);color:var(--ink);border:1px solid var(--sky-dark);}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--ink);}
+  .btn-danger{background:transparent;border:1px solid #e0c0b8;color:var(--accent);}
+  .btn-danger:active{background:var(--accent);color:white;}
+  .btn-sm{padding:0.28rem 0.55rem;font-size:0.6rem;}
+  .section-title{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:0.8rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border);}
+  .two-col{display:grid;grid-template-columns:1fr;gap:0.9rem;margin-bottom:1.3rem;}
+  @media(min-width:560px){.two-col{grid-template-columns:1fr 1fr;}}
+  .book-list{display:flex;flex-direction:column;gap:0.35rem;}
+  .book-item{border:1px solid var(--border);border-radius:5px;background:var(--card);transition:all 0.15s;}
+  .book-item.done{background:#f0f5f0;border-color:#a8cbb0;}
+  .book-item-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none;}
+  .book-item.done .book-title{text-decoration:line-through;color:var(--muted);}
+  .book-check{width:17px;height:17px;border:1.5px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:transparent;transition:all 0.15s;}
+  .book-item.done .book-check{background:var(--success);border-color:var(--success);color:white;}
+  .book-title{font-size:0.85rem;flex:1;text-transform:capitalize;}
+  .book-meta{font-size:0.7rem;color:var(--muted);font-style:italic;}
+  .book-pages{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);flex-shrink:0;}
+  .book-year-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--cream);border-radius:3px;color:var(--muted);flex-shrink:0;}
+  .book-type-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--sky-light);border-radius:3px;color:#3a7090;border:1px solid var(--sky-dark);flex-shrink:0;}
+  .book-edit-row{display:none;padding:0 0.85rem 0.7rem 2.4rem;gap:0.45rem;flex-wrap:wrap;align-items:center;}
+  .book-item.editing .book-edit-row{display:flex;}
+  .book-edit-row input,.book-edit-row select{font-family:'DM Mono',monospace;font-size:0.73rem;padding:0.28rem 0.45rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:4px;}
+  .edit-toggle{background:none;border:none;cursor:pointer;color:var(--border);font-size:0.95rem;padding:0.1rem 0.28rem;transition:color 0.15s;flex-shrink:0;touch-action:manipulation;}
+  .edit-toggle:hover,.edit-toggle:active{color:var(--sky-dark);}
+  .log-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+  .log-table th{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0.45rem 0.6rem;border-bottom:1px solid var(--border);}
+  .log-table td{padding:0.5rem 0.6rem;border-bottom:1px solid var(--cream);}
+  .log-table tr:last-child td{border-bottom:none;}
+  .delete-btn{background:none;border:none;color:var(--border);cursor:pointer;font-size:1rem;padding:0 0.25rem;transition:color 0.15s;}
+  .delete-btn:hover,.delete-btn:active{color:var(--accent);}
+  .filter-row{display:flex;gap:0.35rem;flex-wrap:wrap;}
+  .year-tab{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.28rem 0.75rem;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:20px;transition:all 0.15s;touch-action:manipulation;}
+  .year-tab.active{background:var(--sky);color:var(--ink);border-color:var(--sky-dark);font-weight:500;}
+  .chart-wrap{position:relative;height:200px;margin:0.7rem 0;}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--sky);color:var(--ink);border:1px solid var(--sky-dark);padding:0.6rem 1.3rem;border-radius:20px;font-family:'DM Mono',monospace;font-size:0.76rem;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+  .empty{text-align:center;padding:1.8rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;}
+  .divider{height:1px;background:var(--border);margin:1.2rem 0;}
+  .pacing-box{margin-top:0.7rem;padding:0.55rem 0.85rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:4px;font-size:0.8rem;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <h2>My <span>Library</span></h2>
+  <div class="spinner"></div>
+  <p>Verbinde mit Firebase…</p>
+</div>
+
+<div id="offline-banner">⚠ Kein Internet – Änderungen werden lokal gespeichert</div>
+
+<div id="app" style="display:none">
+<header>
+  <div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;color:#5a7888;text-transform:uppercase;margin-bottom:0.25rem">Reading Tracker</div>
+    <h1>My <span>Library</span></h1>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-year" id="header-year">2026</div>
+    <div class="hdr-date" id="header-date"></div>
+    <div id="sync-status"></div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('today',this)">📖 Heute</button>
+  <button onclick="switchTab('goal',this)">🎯 Ziel</button>
+  <button onclick="switchTab('books',this)">📚 Bücher</button>
+  <button onclick="switchTab('years',this)">📊 Jahre</button>
+  <button onclick="switchTab('stats',this)">✦ Statistik</button>
+</nav>
+
+<main>
+<!-- HEUTE -->
+<div id="tab-today" class="tab-content active">
+  <div class="section-title" style="margin-top:0.4rem">Heute lesen</div>
+  <div class="card-sky" style="margin-bottom:1.1rem">
+    <div class="card-title">Eintrag hinzufügen</div>
+    <div class="input-row">
+      <input type="date" id="log-date" style="max-width:145px">
+      <select id="log-book" style="flex:2"></select>
+      <input type="number" id="log-pages" min="1" max="9999" placeholder="Seiten" style="max-width:85px">
+      <button class="btn btn-primary" onclick="addEntry()">+ Eintragen</button>
+    </div>
+  </div>
+  <div class="stats-grid">
+    <div class="card"><div class="card-title">Heute</div><div class="big-number accent" id="stat-today">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Woche</div><div class="big-number" id="stat-week">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Monat</div><div class="big-number gold" id="stat-month">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Ø/Tag</div><div class="big-number sky" id="stat-avg">0</div><div class="sub">dieses Jahr</div></div>
+  </div>
+  <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
+  <div class="card">
+    <table class="log-table">
+      <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Seiten</th><th></th></tr></thead>
+      <tbody id="log-body"></tbody>
+    </table>
+    <div class="empty" id="log-empty" style="display:none">Noch keine Einträge</div>
+  </div>
+</div>
+
+<!-- ZIEL -->
+<div id="tab-goal" class="tab-content">
+  <div class="section-title" style="margin-top:0.4rem">Jahresziel</div>
+  <div class="goal-grid">
+    <div class="card">
+      <div class="card-title">Ziel für <span id="goal-year-label">2026</span></div>
+      <div class="input-row" style="margin-top:0.5rem">
+        <input type="number" id="goal-input" min="100" max="50000" placeholder="Seiten/Jahr" style="font-size:1.05rem;padding:0.5rem">
+        <button class="btn btn-primary" onclick="saveGoal()">Speichern</button>
+      </div>
+      <div class="sub" style="margin-top:0.45rem">= <span id="goal-per-day">—</span> S./Tag · <span id="goal-books">—</span> Bücher à 350 S.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fortschritt</div>
+      <div class="big-number" id="goal-progress-pct">—%</div>
+      <div class="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="goal-bar" style="width:0%"></div></div>
+        <div class="progress-labels"><span id="goal-read">0 S.</span><span id="goal-total">—</span></div>
+      </div>
+      <div class="sub" id="goal-status"></div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Stand heute vs. Tagesziel</div>
+      <div class="big-number" id="pacing-diff" style="font-size:1.55rem">—</div>
+      <div class="sub" id="pacing-label"></div>
+      <div class="pacing-box" id="pacing-days-box"></div>
+      <div class="progress-wrap" style="margin-top:0.7rem">
+        <div class="progress-track"><div class="progress-fill sky" id="pacing-bar" style="width:0%"></div></div>
+        <div class="progress-labels"><span id="pacing-is">ist</span><span id="pacing-should">soll</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Prognose</div>
+      <div class="big-number gold" id="forecast-pages" style="font-size:1.55rem">—</div>
+      <div class="sub">Seiten bis Jahresende</div>
+      <div style="margin-top:0.75rem;font-size:0.78rem;line-height:1.7" id="forecast-detail"></div>
+    </div>
+  </div>
+  <div class="section-title">Historische Ziele</div>
+  <div class="card">
+    <table class="log-table">
+      <thead><tr><th>Jahr</th><th>Ziel</th><th>Erreicht</th><th>%</th></tr></thead>
+      <tbody id="goals-history-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BÜCHER -->
+<div id="tab-books" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.6rem;margin-top:0.4rem">
+    <div class="section-title" style="margin:0;border:none">Bücher</div>
+    <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap">
+      <div class="filter-row" id="books-year-filter"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
+    </div>
+  </div>
+  <div class="card-sky" style="margin-bottom:0.85rem">
+    <div class="card-title">Neues Buch</div>
+    <div class="input-row">
+      <input type="text" id="new-book-title" placeholder="Titel…" style="flex:3;min-width:110px">
+      <input type="text" id="new-book-author" placeholder="Autor…" style="flex:2;min-width:80px">
+      <select id="new-book-type" style="min-width:95px">
+        <option value="">Typ…</option>
+        <option>Roman</option><option>Sachbuch</option><option>Biografie</option>
+        <option>Krimi</option><option>Fantasy</option><option>Lyrik</option><option>Sonstiges</option>
+      </select>
+      <input type="number" id="new-book-pages" placeholder="S." style="max-width:70px">
+      <select id="new-book-year" style="max-width:82px"></select>
+      <button class="btn btn-primary" onclick="addBook()">+ Hinzu</button>
+    </div>
+  </div>
+  <div class="book-list" id="book-list"></div>
+</div>
+
+<!-- JAHRE -->
+<div id="tab-years" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;margin-top:0.4rem">
+    <div class="section-title" style="margin:0;border:none;padding:0">Jahresvergleich</div>
+    <div class="filter-row" id="year-compare-filter"></div>
+  </div>
+  <div class="stats-grid" id="year-compare-cards" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))"></div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">Seiten / Jahr</div><div class="chart-wrap"><canvas id="chart-years"></canvas></div></div>
+    <div class="card"><div class="card-title">Bücher / Jahr</div><div class="chart-wrap"><canvas id="chart-books-per-year"></canvas></div></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem">
+    <div class="section-title" style="margin:0;border:none;padding:0">Monatlicher Fortschritt</div>
+    <div class="filter-row" id="monthly-year-filter"></div>
+  </div>
+  <div class="card"><div class="chart-wrap" style="height:190px"><canvas id="chart-monthly"></canvas></div></div>
+</div>
+
+<!-- STATISTIK -->
+<div id="tab-stats" class="tab-content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;margin-top:0.4rem">
+    <div class="section-title" style="margin:0;border:none;padding:0">Statistiken</div>
+    <div class="filter-row" id="stats-year-filter"></div>
+  </div>
+  <div class="stats-grid">
+    <div class="card"><div class="card-title">Bücher</div><div class="big-number" id="stat-total-books">—</div></div>
+    <div class="card"><div class="card-title">Seiten</div><div class="big-number accent" id="stat-total-pages">—</div></div>
+    <div class="card"><div class="card-title">Längstes</div><div class="big-number gold" id="stat-longest">—</div><div class="sub" id="stat-longest-name"></div></div>
+    <div class="card"><div class="card-title">Kürzestes</div><div class="big-number" id="stat-shortest">—</div><div class="sub" id="stat-shortest-name"></div></div>
+    <div class="card"><div class="card-title">Ø Länge</div><div class="big-number sky" id="stat-avg-len">—</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Bestes Jahr</div><div class="big-number gold" id="stat-best-year">—</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card"><div class="card-title">Top 5 Bücher</div><div id="stat-top5" style="margin-top:0.6rem"></div></div>
+    <div class="card"><div class="card-title">Lesegeschwindigkeit</div><div id="stat-speed-detail" style="margin-top:0.6rem;font-size:0.85rem;line-height:1.9"></div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Buchtypen</div>
+      <div class="chart-wrap" style="height:170px"><canvas id="chart-types"></canvas></div>
+      <div id="stat-types-list" style="margin-top:0.6rem"></div>
+    </div>
+    <div class="card"><div class="card-title">Top Autoren</div><div id="stat-authors" style="margin-top:0.6rem"></div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="section-title">Kumulativer Fortschritt</div>
+  <div class="card"><div class="chart-wrap" style="height:230px"><canvas id="chart-cumulative"></canvas></div></div>
+</div>
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BOOK_TYPES=['Roman','Sachbuch','Biografie','Krimi','Fantasy','Lyrik','Sonstiges'];
+const CURRENT_YEAR=new Date().getFullYear();
+
+window._defaultData=function(){return{
+  books:[
+    {id:1,title:'everything i know about love',author:'Dolly Alderton',type:'Roman',pages:368,year:2024,done:true},
+    {id:2,title:'invisibile',author:'Paul Auster',type:'Roman',pages:278,year:2024,done:true},
+    {id:3,title:'ferrovie del messico',author:'Gian Marco Griffi',type:'Roman',pages:824,year:2024,done:true},
+    {id:4,title:'good material',author:'Dolly Alderton',type:'Roman',pages:345,year:2024,done:true},
+    {id:5,title:'after i do',author:'Taylor Jenkins Reid',type:'Roman',pages:334,year:2024,done:true},
+    {id:6,title:'heartburn',author:'Nora Ephron',type:'Roman',pages:179,year:2024,done:true},
+    {id:7,title:'der hausman',author:'Wlada Kolosowa',type:'Roman',pages:316,year:2024,done:true},
+    {id:8,title:'parlarne tra amici',author:'Sally Rooney',type:'Roman',pages:285,year:2024,done:true},
+    {id:9,title:'the temple of fortuna',author:'Elodie Harper',type:'Roman',pages:343,year:2024,done:true},
+    {id:10,title:'anna karenina',author:'Leo Tolstoy',type:'Roman',pages:354,year:2024,done:true},
+    {id:11,title:'the old man and the sea',author:'Ernest Hemingway',type:'Roman',pages:60,year:2024,done:true},
+    {id:12,title:'accabadora',author:'Michela Murgia',type:'Roman',pages:166,year:2024,done:true},
+    {id:13,title:'baumgartner',author:'Paul Auster',type:'Roman',pages:200,year:2024,done:true},
+    {id:14,title:'the longest race',author:'Ed Ayres',type:'Sachbuch',pages:288,year:2024,done:true},
+    {id:15,title:'il sentiero del sale',author:'',type:'Roman',pages:298,year:2024,done:true},
+    {id:16,title:"l'arte di correre",author:'Haruki Murakami',type:'Sachbuch',pages:146,year:2024,done:true},
+    {id:17,title:'dove sei mondo bello',author:'Sally Rooney',type:'Roman',pages:312,year:2024,done:true},
+    {id:18,title:'il cognome delle donne',author:'Aurora Tamigio',type:'Roman',pages:408,year:2024,done:true},
+    {id:19,title:'wellness',author:'Nathan Hill',type:'Roman',pages:611,year:2024,done:true},
+    {id:20,title:'vite che non sono la mia',author:'Emmanuel Carrère',type:'Roman',pages:260,year:2024,done:true},
+    {id:21,title:'normal people',author:'Sally Rooney',type:'Roman',pages:271,year:2024,done:true},
+    {id:22,title:'fedelta',author:'Marco Missiroli',type:'Roman',pages:234,year:2024,done:true},
+    {id:23,title:'tutto per una ragazza',author:'',type:'Roman',pages:274,year:2024,done:true},
+    {id:24,title:'outline',author:'Rachel Cusk',type:'Roman',pages:249,year:2024,done:true},
+    {id:25,title:'ghosts',author:'Rachel Cusk',type:'Roman',pages:352,year:2024,done:true},
+    {id:26,title:'la maestra del vetro',author:'',type:'Roman',pages:395,year:2025,done:true},
+    {id:27,title:'funny story',author:'Emily Henry',type:'Roman',pages:390,year:2025,done:true},
+    {id:28,title:'the pairing',author:'Casey McQuiston',type:'Roman',pages:395,year:2025,done:true},
+    {id:29,title:'book lovers',author:'Emily Henry',type:'Roman',pages:368,year:2025,done:true},
+    {id:30,title:'il mondo alla fine del mondo',author:'Luis Sepúlveda',type:'Roman',pages:127,year:2025,done:true},
+    {id:31,title:'good for a girl',author:'Lauren Fleshman',type:'Sachbuch',pages:289,year:2025,done:true},
+    {id:32,title:'runhundred',author:'',type:'Sachbuch',pages:270,year:2025,done:true},
+    {id:33,title:'the spare room',author:'Helen Garner',type:'Roman',pages:306,year:2025,done:true},
+    {id:34,title:'arresting god in kathmandu',author:'Samrat Upadhyay',type:'Roman',pages:210,year:2025,done:true},
+    {id:35,title:'the guru of love',author:'Samrat Upadhyay',type:'Roman',pages:310,year:2025,done:true},
+    {id:36,title:'better left unsent',author:'Lucie Whitehouse',type:'Roman',pages:385,year:2025,done:true},
+    {id:37,title:'beach read',author:'Emily Henry',type:'Roman',pages:363,year:2025,done:true},
+    {id:38,title:"rachel ryan's resolutions",author:'Emily Henry',type:'Roman',pages:498,year:2025,done:true},
+    {id:39,title:"lootie's world run",author:'',type:'Sachbuch',pages:217,year:2025,done:true},
+    {id:40,title:'let your mind run',author:'Deena Kastor',type:'Sachbuch',pages:304,year:2025,done:true},
+    {id:41,title:'bravey',author:'Alexi Pappas',type:'Biografie',pages:336,year:2025,done:true},
+    {id:42,title:'intermezzo',author:'Sally Rooney',type:'Roman',pages:437,year:2025,done:true},
+    {id:43,title:'born to run',author:'Christopher McDougall',type:'Sachbuch',pages:304,year:2025,done:true},
+    {id:44,title:'dr no',author:'Percival Everett',type:'Roman',pages:321,year:2025,done:true},
+    {id:45,title:'fuochi di lisbona',author:'António Lobo Antunes',type:'Roman',pages:159,year:2025,done:true},
+    {id:46,title:'eat and run',author:'Scott Jurek',type:'Biografie',pages:288,year:2025,done:true},
+    {id:47,title:'melody',author:'',type:'Roman',pages:329,year:2025,done:true},
+    {id:48,title:"l'anniversario",author:'Ennio Flaiano',type:'Roman',pages:122,year:2025,done:true},
+    {id:49,title:'choosing to run',author:'',type:'Sachbuch',pages:272,year:2025,done:true},
+    {id:50,title:'all fours',author:'Miranda July',type:'Roman',pages:336,year:2025,done:true},
+    {id:51,title:'wedding people',author:'Alison Espach',type:'Roman',pages:369,year:2025,done:true},
+    {id:52,title:'tomorrow tomorrow tomorrow',author:'Gabrielle Zevin',type:'Roman',pages:466,year:2025,done:true},
+    {id:53,title:'una vita come tante',author:'Hanya Yanagihara',type:'Roman',pages:941,year:2025,done:true},
+    {id:54,title:'above the clouds',author:'Kilian Jornet',type:'Biografie',pages:180,year:2025,done:true},
+    {id:55,title:'win the inside game',author:'',type:'Sachbuch',pages:198,year:2025,done:true},
+    {id:56,title:'considerati baciata',author:'',type:'Roman',pages:396,year:2026,done:true},
+    {id:57,title:'young jane young',author:'Gabrielle Zevin',type:'Roman',pages:321,year:2026,done:true},
+    {id:58,title:'la sonnambula',author:'',type:'Roman',pages:416,year:2026,done:true},
+    {id:59,title:'il buio oltre la siepe',author:'Harper Lee',type:'Roman',pages:352,year:2026,done:true},
+    {id:60,title:'una vita come tante (rest)',author:'Hanya Yanagihara',type:'Roman',pages:150,year:2026,done:true},
+    {id:61,title:'22 bahnen',author:'Caroline Wahl',type:'Roman',pages:204,year:2026,done:true},
+    {id:62,title:'this is going to hurt',author:'Adam Kay',type:'Biografie',pages:280,year:2026,done:true},
+    {id:63,title:'the empire of pain',author:'Patrick Radden Keefe',type:'Sachbuch',pages:353,year:2026,done:true},
+    {id:64,title:'born a crime',author:'Trevor Noah',type:'Biografie',pages:305,year:2026,done:true},
+    {id:65,title:'okay days',author:'',type:'Roman',pages:292,year:2026,done:false},
+    {id:66,title:'lolita',author:'Vladimir Nabokov',type:'Roman',pages:320,year:2026,done:false},
+    {id:67,title:'leggere lolita a teheran',author:'Azar Nafisi',type:'Sachbuch',pages:0,year:2026,done:false},
+  ],
+  logs:[],goals:{2024:7320,2025:8030,2026:9125},nextId:100
+};};
+
+Object.defineProperty(window,'state',{get(){return window._state;},set(v){window._state=v;}});
+function save(){window.saveToFirebase();}
+
+function allYears(){const y=[];for(let i=2024;i<=CURRENT_YEAR;i++)y.push(i);return y;}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/86400000);}
+function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
+function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
+function pagesThisYear(yr){
+  const b=state.books.filter(b=>b.year===yr&&b.done).reduce((s,b)=>s+(b.pages||0),0);
+  const l=state.logs.filter(l=>l.date.startsWith(String(yr))).reduce((s,l)=>s+l.pages,0);
+  return b+l;
+}
+function pagesFromLogs(ds){return state.logs.filter(l=>l.date===ds).reduce((s,l)=>s+l.pages,0);}
+function pagesInRange(a,b){return state.logs.filter(l=>l.date>=a&&l.date<=b).reduce((s,l)=>s+l.pages,0);}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}
+
+window.addEventListener('offline',()=>{document.getElementById('offline-banner').style.display='block';});
+window.addEventListener('online',()=>{document.getElementById('offline-banner').style.display='none';save();});
+
+function switchTab(tab,btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');refreshAll();
+}
+
+function populateBookSelect(){
+  const sel=document.getElementById('log-book');
+  const books=state.books.filter(b=>!b.done).sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
+  if(!books.length){sel.innerHTML='<option value="">– Kein aktives Buch –</option>';return;}
+  sel.innerHTML=books.map(b=>`<option value="${b.id}">${cap(b.title)}</option>`).join('');
+}
+
+function addEntry(){
+  const date=document.getElementById('log-date').value;
+  const bookId=parseInt(document.getElementById('log-book').value);
+  const pages=parseInt(document.getElementById('log-pages').value);
+  if(!date||!pages||pages<1){toast('Datum und Seiten angeben!');return;}
+  const book=state.books.find(b=>b.id===bookId);
+  state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages});
+  save();document.getElementById('log-pages').value='';toast(`+${pages} Seiten ✓`);refreshAll();
+}
+
+function deleteEntry(id){state.logs=state.logs.filter(l=>l.id!==id);save();renderLog();renderTodayStats();}
+
+function renderLog(){
+  const tbody=document.getElementById('log-body'),empty=document.getElementById('log-empty');
+  const logs=[...state.logs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
+  if(!logs.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=logs.map(l=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td>
+    <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cap(l.bookTitle)}</td>
+    <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td>
+    <td><button class="delete-btn" onclick="deleteEntry(${l.id})">×</button></td>
+  </tr>`).join('');
+  document.getElementById('log-year-label').textContent=`(${logs.length})`;
+}
+
+function renderTodayStats(){
+  const today=todayStr(),wa=new Date();wa.setDate(wa.getDate()-7);
+  const ws=wa.toISOString().slice(0,10),ms=today.slice(0,7);
+  document.getElementById('stat-today').textContent=pagesFromLogs(today)||0;
+  document.getElementById('stat-week').textContent=pagesInRange(ws,today);
+  document.getElementById('stat-month').textContent=pagesInRange(ms+'-01',today);
+  const d=doy(today),t=pagesThisYear(CURRENT_YEAR);
+  document.getElementById('stat-avg').textContent=d>0?Math.round(t/d):0;
+}
+
+function saveGoal(){
+  const val=parseInt(document.getElementById('goal-input').value);
+  if(!val||val<1){toast('Gültiges Ziel eingeben');return;}
+  state.goals[CURRENT_YEAR]=val;save();toast('Ziel gespeichert!');renderGoal();
+}
+
+function renderGoal(){
+  const yr=CURRENT_YEAR,goal=state.goals[yr]||0;
+  document.getElementById('goal-year-label').textContent=yr;
+  document.getElementById('goal-input').value=goal||'';
+  document.getElementById('goal-per-day').textContent=goal?Math.round(goal/daysInYear(yr)):'—';
+  document.getElementById('goal-books').textContent=goal?Math.round(goal/350):'—';
+  const today=todayStr(),done=pagesThisYear(yr),pct=goal?Math.min(100,Math.round(done/goal*100)):0;
+  document.getElementById('goal-progress-pct').textContent=goal?pct+'%':'—';
+  document.getElementById('goal-bar').style.width=pct+'%';
+  document.getElementById('goal-read').textContent=done.toLocaleString('de')+' S.';
+  document.getElementById('goal-total').textContent=goal?goal.toLocaleString('de')+' S.':'—';
+  document.getElementById('goal-status').textContent=goal?(done>=goal?'🎉 Ziel erreicht!':`Noch ${(goal-done).toLocaleString('de')} S.`):'Kein Ziel gesetzt';
+  const dy=doy(today),pace=goal?goal/daysInYear(yr):0,sh=Math.round(pace*dy),diff=done-sh;
+  const de=document.getElementById('pacing-diff');
+  de.textContent=(diff>=0?'+':'')+diff.toLocaleString('de')+' S.';
+  de.style.color=diff>=0?'var(--success)':'var(--accent)';
+  document.getElementById('pacing-label').textContent=diff>=0?'vor dem Zeitplan':'hinter dem Zeitplan';
+  const db2=document.getElementById('pacing-days-box');
+  if(goal&&pace>0){
+    const dd=Math.round(Math.abs(diff)/pace),sign=diff>=0;
+    const ed=new Date(today);ed.setDate(ed.getDate()+(sign?dd:-dd));
+    const ds=ed.toLocaleDateString('de-DE',{day:'numeric',month:'long'});
+    db2.innerHTML=sign
+      ?`Du liest wie jemand am <strong>${ds}</strong> — <strong style="color:var(--success)">${dd} ${dd===1?'Tag':'Tage'} voraus</strong>.`
+      :`Du liest wie jemand am <strong>${ds}</strong> — <strong style="color:var(--accent)">${dd} ${dd===1?'Tag':'Tage'} hinter</strong> dem Ziel.`;
+  } else db2.textContent='Kein Ziel gesetzt.';
+  const pp=sh>0?Math.min(100,Math.round(done/sh*100)):0;
+  document.getElementById('pacing-bar').style.width=pp+'%';
+  document.getElementById('pacing-is').textContent=done.toLocaleString('de')+' S.';
+  document.getElementById('pacing-should').textContent=sh.toLocaleString('de')+' S.';
+  const dl=daysInYear(yr)-dy,av=dy>0?done/dy:0,fc=Math.round(done+av*dl);
+  document.getElementById('forecast-pages').textContent=fc.toLocaleString('de')+' S.';
+  document.getElementById('forecast-detail').innerHTML=`
+    Aktuelles Tempo: <strong>${Math.round(av)} S./Tag</strong><br>
+    Brauche: <strong>${Math.round(pace)} S./Tag</strong> für Ziel<br>
+    ${fc>=goal?'<span style="color:var(--success)">✓ Ziel wird erreicht</span>'
+      :`<span style="color:var(--accent)">–${(goal-fc).toLocaleString('de')} S. | ${Math.ceil((goal-fc)/Math.max(1,dl))} S./Tag mehr nötig</span>`}`;
+  const years=allYears().filter(y=>state.goals[y]);
+  document.getElementById('goals-history-body').innerHTML=years.map(y=>{
+    const g=state.goals[y],r=pagesThisYear(y),p=Math.round(r/g*100),ok=r>=g;
+    return`<tr><td style="font-family:'DM Mono',monospace">${y}</td><td>${g.toLocaleString('de')}</td><td>${r.toLocaleString('de')}</td>
+    <td style="color:${ok?'var(--success)':'var(--accent)'};font-family:'DM Mono',monospace">${p}%${ok?' ✓':''}</td></tr>`;
+  }).join('');
+}
+
+let booksYF=new Set();
+function toggleBooksYear(y){if(y==='all')booksYF.clear();else booksYF.has(y)?booksYF.delete(y):booksYF.add(y);renderBooks();}
+function toggleBook(id){const b=state.books.find(b=>b.id===id);if(b){b.done=!b.done;save();renderBooks();populateBookSelect();}}
+function toggleEditBook(id,e){e.stopPropagation();document.querySelector(`.book-item[data-id="${id}"]`)?.classList.toggle('editing');}
+function saveBookEdit(id){
+  const b=state.books.find(b=>b.id===id);if(!b)return;
+  const t=document.getElementById(`et-${id}`).value.trim();
+  b.author=document.getElementById(`ea-${id}`).value.trim();
+  b.type=document.getElementById(`ety-${id}`).value;
+  b.pages=parseInt(document.getElementById(`ep-${id}`).value)||b.pages;
+  if(t)b.title=t.toLowerCase();
+  save();toast('Gespeichert ✓');renderBooks();populateBookSelect();
+}
+function deleteBook(id,e){
+  e.stopPropagation();if(!confirm('Buch löschen?'))return;
+  state.books=state.books.filter(b=>b.id!==id);save();renderBooks();populateBookSelect();
+}
+function addBook(){
+  const title=document.getElementById('new-book-title').value.trim();
+  const author=document.getElementById('new-book-author').value.trim();
+  const type=document.getElementById('new-book-type').value;
+  const pages=parseInt(document.getElementById('new-book-pages').value)||0;
+  const year=parseInt(document.getElementById('new-book-year').value);
+  if(!title){toast('Titel eingeben');return;}
+  state.books.push({id:state.nextId++,title:title.toLowerCase(),author,type,pages,year,done:false});
+  save();['new-book-title','new-book-author','new-book-pages'].forEach(id=>document.getElementById(id).value='');
+  toast('Buch hinzugefügt ✓');renderBooks();populateBookSelect();
+}
+
+function renderBooks(){
+  const years=allYears(),fc=document.getElementById('books-year-filter');
+  if(fc){const all=booksYF.size===0;
+    fc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleBooksYear('all')">Alle</button>`
+      +years.map(y=>`<button class="year-tab ${booksYF.has(y)?'active':''}" onclick="toggleBooksYear(${y})">${y}</button>`).join('');}
+  let books=state.books.filter(b=>booksYF.size===0||booksYF.has(b.year));
+  books=[...books].sort((a,b)=>a.year-b.year||a.title.localeCompare(b.title));
+  document.getElementById('books-count').textContent=books.length;
+  document.getElementById('books-done').textContent=books.filter(b=>b.done).length;
+  const list=document.getElementById('book-list');
+  if(!books.length){list.innerHTML='<div class="empty">Keine Bücher</div>';return;}
+  list.innerHTML=books.map(b=>`
+    <div class="book-item ${b.done?'done':''}" data-id="${b.id}">
+      <div class="book-item-row" onclick="toggleBook(${b.id})">
+        <div class="book-check">${b.done?'✓':''}</div>
+        <div style="flex:1;min-width:0"><div class="book-title">${cap(b.title)}</div>${b.author?`<div class="book-meta">${b.author}</div>`:''}</div>
+        ${b.type?`<div class="book-type-badge">${b.type}</div>`:''}
+        ${b.pages?`<div class="book-pages">${b.pages}S.</div>`:''}
+        <div class="book-year-badge">${b.year}</div>
+        <button class="edit-toggle" onclick="toggleEditBook(${b.id},event)">✎</button>
+      </div>
+      <div class="book-edit-row">
+        <input id="et-${b.id}" type="text" value="${cap(b.title)}" placeholder="Titel" style="flex:3;min-width:90px">
+        <input id="ea-${b.id}" type="text" value="${b.author||''}" placeholder="Autor" style="flex:2;min-width:75px">
+        <select id="ety-${b.id}" style="min-width:85px"><option value="">Typ…</option>${BOOK_TYPES.map(t=>`<option value="${t}"${b.type===t?' selected':''}>${t}</option>`).join('')}</select>
+        <input id="ep-${b.id}" type="number" value="${b.pages||''}" placeholder="S." style="max-width:65px">
+        <button class="btn btn-sky btn-sm" onclick="saveBookEdit(${b.id})">OK</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteBook(${b.id},event)">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+let charts={},selCY=new Set(),selMY=new Set();
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+const CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{grid:{color:'#e8e3d4'},ticks:{font:{family:'DM Mono',size:9},color:'#7a7060'}},
+          y:{grid:{color:'#e8e3d4'},ticks:{font:{family:'DM Mono',size:9},color:'#7a7060'}}}};
+
+function toggleCY(y){if(y==='all')selCY.clear();else selCY.has(y)?selCY.delete(y):selCY.add(y);renderYearCharts();}
+function toggleMY(y){selMY.has(y)?selMY.delete(y):selMY.add(y);renderYearCharts();}
+
+function renderYearCharts(){
+  const years=allYears(),pal=['#a8c4d8','#b8860b','#c8402a','#5b7fa6','#9c6b8a','#4a7c59'];
+  const cc=document.getElementById('year-compare-filter');
+  if(cc){const all=selCY.size===0;
+    cc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleCY('all')">Alle</button>`
+      +years.map(y=>`<button class="year-tab ${selCY.has(y)?'active':''}" onclick="toggleCY(${y})">${y}</button>`).join('');}
+  const mc=document.getElementById('monthly-year-filter');
+  if(mc){const none=selMY.size===0;
+    mc.innerHTML=years.map(y=>{const a=none?y===CURRENT_YEAR:selMY.has(y);
+      return`<button class="year-tab ${a?'active':''}" onclick="toggleMY(${y})">${y}</button>`;}).join('');}
+  const dY=selCY.size===0?years:years.filter(y=>selCY.has(y));
+  const pages=dY.map(y=>pagesThisYear(y)),books=dY.map(y=>state.books.filter(b=>b.year===y&&b.done).length);
+  const bc=dY.map(y=>pal[years.indexOf(y)%pal.length]);
+  document.getElementById('year-compare-cards').innerHTML=dY.map((y,i)=>{
+    const prev=i>0?pages[i-1]:null,diff=prev?Math.round((pages[i]-prev)/prev*100):null;
+    return`<div class="card"><div class="card-title">${y}</div>
+      <div class="big-number ${y===CURRENT_YEAR?'accent':''}">${pages[i].toLocaleString('de')}</div>
+      <div class="sub">${books[i]} Bücher${diff!==null?` · ${diff>0?'+':''}${diff}%`:''}</div></div>`;}).join('');
+  destroyChart('years');
+  charts['years']=new Chart(document.getElementById('chart-years').getContext('2d'),{type:'bar',
+    data:{labels:dY.map(String),datasets:[{data:pages,backgroundColor:bc,borderRadius:3}]},
+    options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
+  destroyChart('books-per-year');
+  charts['books-per-year']=new Chart(document.getElementById('chart-books-per-year').getContext('2d'),{type:'bar',
+    data:{labels:dY.map(String),datasets:[{data:books,backgroundColor:bc,borderRadius:3}]},
+    options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
+  const months=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const mY=selMY.size===0?[CURRENT_YEAR]:years.filter(y=>selMY.has(y));
+  const lc=['#c8402a','#b8860b','#4a7c59','#5b7fa6','#9c6b8a'];
+  const mDs=mY.map((y,i)=>{const color=lc[years.indexOf(y)%lc.length];
+    return{label:String(y),data:months.map((_,m)=>{const p=`${y}-${String(m+1).padStart(2,'0')}`;
+        return state.logs.filter(l=>l.date.startsWith(p)).reduce((s,l)=>s+l.pages,0);}),
+      borderColor:color,backgroundColor:mY.length===1?color.replace('rgb','rgba').replace(')',',0.08)'):'transparent',
+      fill:mY.length===1,tension:0.3,pointBackgroundColor:color,pointRadius:3,borderWidth:y===CURRENT_YEAR?2.5:1.5};});
+  destroyChart('monthly');
+  charts['monthly']=new Chart(document.getElementById('chart-monthly').getContext('2d'),{type:'line',
+    data:{labels:months,datasets:mDs},
+    options:{...CD,plugins:{legend:{display:mY.length>1,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
+      scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
+}
+
+let selSY=new Set();
+function toggleSY(y){if(y==='all')selSY.clear();else selSY.has(y)?selSY.delete(y):selSY.add(y);renderStats();}
+
+function renderStats(){
+  const years=allYears(),sc=document.getElementById('stats-year-filter');
+  if(sc){const all=selSY.size===0;
+    sc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleSY('all')">Alle</button>`
+      +years.map(y=>`<button class="year-tab ${selSY.has(y)?'active':''}" onclick="toggleSY(${y})">${y}</button>`).join('');}
+  const books=state.books.filter(b=>b.pages>0&&(selSY.size===0||selSY.has(b.year)));
+  const total=books.length,tp=books.reduce((s,b)=>s+(b.pages||0),0),sorted=[...books].sort((a,b)=>b.pages-a.pages);
+  document.getElementById('stat-total-books').textContent=total;
+  document.getElementById('stat-total-pages').textContent=tp.toLocaleString('de');
+  if(sorted.length){
+    document.getElementById('stat-longest').textContent=sorted[0].pages;
+    document.getElementById('stat-longest-name').textContent=cap(sorted[0].title);
+    const sh=sorted[sorted.length-1];
+    document.getElementById('stat-shortest').textContent=sh.pages;
+    document.getElementById('stat-shortest-name').textContent=cap(sh.title);
+  }else{['stat-longest','stat-shortest'].forEach(id=>document.getElementById(id).textContent='—');
+    ['stat-longest-name','stat-shortest-name'].forEach(id=>document.getElementById(id).textContent='');}
+  document.getElementById('stat-avg-len').textContent=total?Math.round(tp/total):'—';
+  const best=years.reduce((b,y)=>pagesThisYear(y)>pagesThisYear(b)?y:b,years[0]);
+  document.getElementById('stat-best-year').textContent=best;
+  document.getElementById('stat-top5').innerHTML=sorted.slice(0,5).length
+    ?sorted.slice(0,5).map((b,i)=>`<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid var(--cream);font-size:0.78rem">
+        <div><span style="font-family:'DM Mono',monospace;color:var(--muted);margin-right:0.35rem">${i+1}</span>${cap(b.title)}${b.author?`<span style="color:var(--muted);font-size:0.68rem;margin-left:0.3rem">· ${b.author}</span>`:''}</div>
+        <span style="font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0;margin-left:0.3rem">${b.pages}S.</span></div>`).join('')
+    :'<div class="empty">Keine Bücher</div>';
+  const td=todayStr(),dn=doy(td),tyP=pagesThisYear(CURRENT_YEAR),av=dn>0?Math.round(tyP/dn):0;
+  document.getElementById('stat-speed-detail').innerHTML=`
+    <div>Ø Seiten/Tag <strong>${av}</strong></div><div>Ø Seiten/Woche <strong>${av*7}</strong></div>
+    <div>Ø Seiten/Monat <strong>${av*30}</strong></div><div>Bücher/Jahr (Ø 350) <strong>${Math.round(av*365/350)}</strong></div>
+    <div style="margin-top:0.6rem;color:var(--muted);font-size:0.7rem">Basis: ${CURRENT_YEAR}, Tag ${dn}</div>`;
+  const tc={};books.forEach(b=>{const t=b.type||'Unbekannt';tc[t]=(tc[t]||0)+1;});
+  const te=Object.entries(tc).sort((a,b)=>b[1]-a[1]),cols=['#a8c4d8','#b8860b','#c8402a','#4a7c59','#9c6b8a','#5b7fa6','#c8d8c0'];
+  destroyChart('types');
+  if(te.length){charts['types']=new Chart(document.getElementById('chart-types').getContext('2d'),{type:'doughnut',
+    data:{labels:te.map(e=>e[0]),datasets:[{data:te.map(e=>e[1]),backgroundColor:cols,borderWidth:2,borderColor:'#faf8f3'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',
+      labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:10,padding:5}}}}});
+    document.getElementById('stat-types-list').innerHTML=te.map((e,i)=>`
+      <div style="display:flex;justify-content:space-between;padding:0.22rem 0;font-size:0.75rem;border-bottom:1px solid var(--cream)">
+        <span style="display:flex;align-items:center;gap:0.35rem"><span style="width:8px;height:8px;border-radius:50%;background:${cols[i%cols.length]};display:inline-block;flex-shrink:0"></span>${e[0]}</span>
+        <span style="font-family:'DM Mono',monospace;color:var(--muted)">${e[1]} (${Math.round(e[1]/total*100)}%)</span></div>`).join('');}
+  const ac={};books.filter(b=>b.author).forEach(b=>{ac[b.author]=(ac[b.author]||0)+1;});
+  const ae=Object.entries(ac).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('stat-authors').innerHTML=ae.length
+    ?ae.map((e,i)=>`<div style="margin-bottom:0.45rem">
+        <div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:0.12rem">
+          <span><span style="font-family:'DM Mono',monospace;color:var(--muted);margin-right:0.28rem">${i+1}</span>${e[0]}</span>
+          <span style="font-family:'DM Mono',monospace;color:var(--muted)">${e[1]} ${e[1]===1?'Buch':'Bücher'}</span></div>
+        <div class="progress-track"><div class="progress-fill sky" style="width:${Math.round(e[1]/ae[0][1]*100)}%"></div></div></div>`).join('')
+    :'<div class="empty" style="padding:0.7rem">Keine Autoren-Daten</div>';
+  const cd=years.map(y=>{const by=state.books.filter(b=>b.year===y&&b.done).sort((a,b)=>a.id-b.id);
+    let cum=0;return[0,...by.map(b=>{cum+=b.pages;return cum;})];});
+  const ml=Math.max(...cd.map(d=>d.length));
+  const lb=Array.from({length:ml},(_,i)=>i===0?'Start':`B${i}`);
+  const cp=['#4a7c59','#b8860b','#c8402a','#5b7fa6','#9c6b8a'];
+  destroyChart('cumulative');
+  charts['cumulative']=new Chart(document.getElementById('chart-cumulative').getContext('2d'),{type:'line',
+    data:{labels:lb,datasets:years.map((y,i)=>({label:String(y),data:cd[i],borderColor:cp[i%cp.length],
+      backgroundColor:'transparent',tension:0.2,pointRadius:1.5,borderWidth:y===CURRENT_YEAR?2.5:1.5}))},
+    options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
+      scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
+}
+
+window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();};
+
+window.initApp=function(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const now=new Date();
+  document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('header-year').textContent=CURRENT_YEAR;
+  const ny=document.getElementById('new-book-year');
+  if(ny)ny.innerHTML=allYears().map(y=>`<option value="${y}"${y===CURRENT_YEAR?' selected':''}>${y}</option>`).join('');
+  document.getElementById('log-date').value=todayStr();
+  populateBookSelect();refreshAll();
+};
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
