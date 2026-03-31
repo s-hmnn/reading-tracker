@@ -18,7 +18,7 @@
   // ─────────────────────────────────────────────────────
   // 🔧 SCHRITT 1: DEINE FIREBASE CONFIG HIER EINFÜGEN
   // ─────────────────────────────────────────────────────
-const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyD3FVnncEvI6F2JuAptLgClI3Ey_TlmcOw",
   authDomain: "reading-tracker-5e5b2.firebaseapp.com",
   databaseURL: "https://reading-tracker-5e5b2-default-rtdb.europe-west1.firebasedatabase.app",
@@ -37,26 +37,33 @@ const firebaseConfig = {
     if(el){el.textContent=msg;el.style.color=color;}
   }
 
+  // Firebase gibt leere Arrays nicht zurueck — sanitizeState stellt sicher
+  // dass books, logs und goals immer definiert sind
+  function sanitizeState(s){
+    if(!s) return window._defaultData();
+    s.books  = Array.isArray(s.books) ? s.books : [];
+    s.logs   = Array.isArray(s.logs)  ? s.logs  : [];
+    s.goals  = s.goals  || {};
+    s.nextId = s.nextId || (Math.max(0,...(s.books.length?s.books.map(b=>b.id||0):[0])) + 1);
+    return s;
+  }
+
   async function loadFromFirebase(){
-    setStatus('⟳ Verbinde…');
+    setStatus('\u233b Verbinde\u2026');
     try{
       const snap=await get(ref(db,'tracker'));
       if(snap.exists()){
-        window._state=snap.val();
-        if(!window._state.nextId){
-          const mx=Math.max(0,...(window._state.books||[]).map(b=>b.id||0));
-          window._state.nextId=mx+1;
-        }
+        window._state=sanitizeState(snap.val());
       } else {
         window._state=window._defaultData();
         await set(ref(db,'tracker'),window._state);
       }
-      setStatus('✓ Synchronisiert','var(--success)');
+      setStatus('\u2713 Synchronisiert','var(--success)');
       setTimeout(()=>setStatus(''),3000);
     } catch(e){
       console.error(e);
-      setStatus('⚠ Offline – lokale Daten','var(--accent)');
-      try{window._state=JSON.parse(localStorage.getItem('reading_tracker_v3'))||window._defaultData();}
+      setStatus('\u26a0 Offline \u2013 lokale Daten','var(--accent)');
+      try{window._state=sanitizeState(JSON.parse(localStorage.getItem('reading_tracker_v3')))||window._defaultData();}
       catch{window._state=window._defaultData();}
     }
     window._firebaseReady=true;
@@ -66,11 +73,10 @@ const firebaseConfig = {
   function startRealtimeSync(){
     onValue(ref(db,'tracker'),(snap)=>{
       if(!snap.exists())return;
-      const remote=snap.val();
+      const remote=sanitizeState(snap.val());
       if(JSON.stringify(remote)!==JSON.stringify(window._state)){
         window._state=remote;
-        if(!window._state.nextId)window._state.nextId=100;
-        setStatus('↻ Aktualisiert','#3a7090');
+        setStatus('\u21bb Aktualisiert','#3a7090');
         setTimeout(()=>setStatus(''),2000);
         if(window.refreshAll)window.refreshAll();
       }
