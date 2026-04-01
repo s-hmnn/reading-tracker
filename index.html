@@ -282,6 +282,8 @@
   .bm-field{margin-bottom:0.9rem;}
   .bm-input{font-family:'DM Mono',monospace;font-size:0.83rem;padding:0.45rem 0.6rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:5px;width:100%;}
   .bm-input:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
+  .bm-ai-summary{font-family:'DM Sans',sans-serif;font-size:0.83rem;line-height:1.6;color:var(--ink);background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:0.5rem 0.65rem;white-space:pre-wrap;min-height:2.5rem;}
+  .bm-ai-summary:empty{display:none;}
   .star-widget{display:flex;gap:0;align-items:center;margin-top:0.3rem;}
   .star-h{display:inline-block;width:14px;height:26px;cursor:pointer;overflow:hidden;position:relative;vertical-align:middle;}
   .star-h::before{content:'★';position:absolute;top:0;left:0;font-size:1.5rem;line-height:1;color:var(--border);white-space:nowrap;}
@@ -596,6 +598,11 @@
       <div class="bm-field">
         <label class="bm-label">Notizen</label>
         <textarea id="bm-notes" class="bm-input" rows="4" placeholder="Gedanken, Zitate, Zusammenfassung…" style="resize:vertical;min-height:80px"></textarea>
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">KI-Zusammenfassung</label>
+        <div id="bm-ai-summary" class="bm-ai-summary"></div>
+        <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Zusammenfassung generieren</button>
       </div>
       <div class="bm-field">
         <label class="bm-label">Keywords</label>
@@ -1245,6 +1252,7 @@ function openBookModal(id){
   document.getElementById('bm-meta').textContent=[b.author,b.type,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-notes').value=b.notes||'';
+  document.getElementById('bm-ai-summary').textContent=b.aiSummary||'';
   renderStarWidget(b.rating||0);
   _bmQuotes=[...(b.quotes||[])];
   renderKeywordTags();
@@ -1337,6 +1345,64 @@ function addQuote(){
 }
 function deleteQuote(idx){_bmQuotes.splice(idx,1);renderQuotesList();}
 // ── End Book Detail Modal ────────────────────────────────
+
+// ── KI-Zusammenfassung ───────────────────────────────────
+// ⚠️  API Key hier eintragen – später durch Cloud Function ersetzen
+const ANTHROPIC_API_KEY = 'HIER_DEINEN_KEY_EINTRAGEN';
+
+async function generateBookSummary(bookId) {
+  const btn = document.getElementById('bm-ai-btn');
+  const display = document.getElementById('bm-ai-summary');
+  btn.disabled = true;
+  btn.textContent = 'Generiere…';
+  display.textContent = '';
+
+  const b = state.books.find(b => b.id === bookId);
+  if (!b) { btn.disabled = false; btn.textContent = 'KI-Zusammenfassung generieren'; return; }
+
+  const quotesText = (b.quotes || []).map(q => `- "${q.text}" (S. ${q.page})`).join('\n');
+  const prompt = `Du analysierst Lesenotizen für das Buch "${b.title}" von ${b.author}.
+
+Notizen: ${b.notes || '(keine)'}
+
+Markierte Zitate:
+${quotesText || '(keine)'}
+
+Keywords: ${(b.keywords || []).join(', ') || '(keine)'}
+
+Erstelle eine strukturierte Zusammenfassung (max. 200 Wörter) der wichtigsten Gedanken und Erkenntnisse aus diesen Notizen.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-allow-browser': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || response.status); }
+    const data = await response.json();
+    const summary = data.content[0].text;
+    b.aiSummary = summary;
+    b.aiSummaryDate = Date.now();
+    save();
+    display.textContent = summary;
+    toast('KI-Zusammenfassung gespeichert ✓');
+  } catch(e) {
+    toast('Fehler: ' + (e.message || 'Unbekannter Fehler'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'KI-Zusammenfassung generieren';
+  }
+}
+// ── End KI-Zusammenfassung ───────────────────────────────
 
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();checkYesterdayBanner();};
 
