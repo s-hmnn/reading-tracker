@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#C9DDEB">
+<meta name="theme-color" content="#0EA5E9">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Crescendo">
 <link rel="manifest" href="manifest.json">
 <title>Crescendo</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -52,9 +52,10 @@
   // dass books, logs und goals immer definiert sind
   function sanitizeState(s){
     if(!s) return window._defaultData();
-    s.books  = Array.isArray(s.books) ? s.books : [];
-    s.logs   = Array.isArray(s.logs)  ? s.logs  : [];
-    s.goals  = s.goals  || {};
+    s.books    = Array.isArray(s.books)    ? s.books    : [];
+    s.logs     = Array.isArray(s.logs)     ? s.logs     : [];
+    s.goals    = s.goals    || {};
+    s.concepts = Array.isArray(s.concepts) ? s.concepts : [];
     s.nextId = s.nextId || (Math.max(0,...(s.books.length?s.books.map(b=>b.id||0):[0])) + 1);
     s.books = s.books.map(b => {
       if(!b.status){
@@ -180,35 +181,43 @@
   });
 </script>
 <style>
-  :root{--ink:#1A2033;--paper:#F4F6F9;--cream:#E8EDF3;--accent:#c8402a;--gold:#b8860b;--muted:#7B8599;--border:#E0E5EE;--success:#4a7c59;--card:#FFFFFF;--sky:#C9DDEB;--sky-dark:#5B9EC9;--sky-light:#e8f2f8;}
+  :root{
+    --bg:#F0F8FF;--surface:#FFFFFF;--border:#E2E8F0;--border-hover:#BAE6FD;
+    --sky-50:#F0F9FF;--sky-100:#E0F2FE;--sky-200:#BAE6FD;--sky-400:#38BDF8;--sky-500:#0EA5E9;--sky-600:#0284C7;--sky-700:#0369A1;
+    --text-primary:#0F172A;--text-secondary:#64748B;--text-muted:#94A3B8;
+    --success:#10B981;--warning:#F59E0B;--danger:#EF4444;
+    --slate-50:#F8FAFC;--slate-100:#F1F5F9;
+    /* legacy */
+    --ink:#0F172A;--paper:#F0F8FF;--cream:#F1F5F9;--accent:#EF4444;--gold:#F59E0B;--muted:#64748B;--card:#FFFFFF;--sky:#BAE6FD;--sky-dark:#0EA5E9;--sky-light:#F0F9FF;--border-color:#E2E8F0;
+  }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;}
-  #loading-screen{position:fixed;inset:0;background:var(--sky);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
-  #loading-screen h2{font-family:'Playfair Display',serif;font-size:2rem;}
-  #loading-screen h2 span{color:var(--accent);font-style:italic;}
-  .spinner{width:36px;height:36px;border:3px solid var(--sky-dark);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5;}
+  #loading-screen{position:fixed;inset:0;background:var(--sky-50);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
+  #loading-screen h2{font-family:'Inter',sans-serif;font-weight:600;font-size:22px;color:var(--text-primary);}
+  #loading-screen h2 span{color:var(--sky-500);}
+  .spinner{width:36px;height:36px;border:3px solid var(--sky-200);border-top-color:var(--sky-500);border-radius:50%;animation:spin 0.8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  #loading-screen p{font-family:'DM Mono',monospace;font-size:0.75rem;color:#4a6070;}
-  #offline-banner{display:none;background:#fff3cd;border-bottom:1px solid #ffc107;padding:0.4rem 1rem;text-align:center;font-family:'DM Mono',monospace;font-size:0.72rem;color:#664d03;}
-  header{background:var(--sky);padding:1.4rem 1.5rem 1.1rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;border-bottom:3px solid var(--sky-dark);}
-  header h1{font-family:'DM Sans',sans-serif;font-weight:500;font-size:clamp(1.4rem,5vw,2.2rem);letter-spacing:-0.02em;line-height:1;}
-  header h1 span{color:var(--accent);font-style:italic;}
-  .hdr-right{text-align:right;}
-  .hdr-year{font-family:'Playfair Display',serif;font-size:1.3rem;line-height:1;}
-  .hdr-date{font-family:'DM Mono',monospace;font-size:0.68rem;color:#4a6070;}
-  #sync-status{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);min-height:1em;}
-  nav{background:var(--sky-light);border-bottom:1px solid var(--sky-dark);display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:10;}
-  nav::-webkit-scrollbar{display:none;}
-  nav button{font-family:'DM Mono',monospace;font-size:0.67rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.8rem 1rem;border:none;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.2s;flex-shrink:0;}
-  nav button.active{color:var(--sky-dark);border-bottom-color:var(--sky-dark);background:var(--sky-light);}
-  nav button:hover:not(.active){color:var(--ink);}
-  main{padding:1.2rem 1.2rem 5rem;max-width:900px;margin:0 auto;}
+  #loading-screen p{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
+  #offline-banner{display:none;background:#FEF3C7;border-bottom:1px solid #F59E0B;padding:8px 16px;text-align:center;font-size:12px;color:#92400E;letter-spacing:0.04em;}
+  /* ── Top Navigation Bar ── */
+  #topbar{position:sticky;top:0;z-index:100;height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
+  #topbar-logo{font-family:'Inter',sans-serif;font-size:16px;font-weight:600;color:var(--sky-500);white-space:nowrap;flex-shrink:0;}
+  #topbar-nav{display:flex;align-items:center;flex:1;justify-content:center;overflow-x:auto;scrollbar-width:none;height:56px;}
+  #topbar-nav::-webkit-scrollbar{display:none;}
+  #topbar-nav button{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;height:56px;padding:0 14px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color 150ms,border-color 200ms;flex-shrink:0;}
+  #topbar-nav button.active{color:var(--sky-700);border-bottom-color:var(--sky-500);}
+  #topbar-nav button:hover:not(.active){color:var(--sky-400);}
+  #topbar-right{display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:auto;}
+  #sync-status{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
+  .hdr-year{display:none;} .hdr-date{display:none;} .hdr-right{display:none;}
+  main{padding:32px 24px 80px;max-width:1280px;margin:0 auto;}
   .tab-content{display:none;} .tab-content.active{display:block;}
-  .card{background:var(--card);border:none;border-radius:12px;padding:1.1rem;box-shadow:0 1px 3px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);}
-  .card-sky{background:var(--sky-light);border:none;border-radius:12px;padding:1.1rem;box-shadow:0 1px 3px rgba(0,0,0,0.06),0 0 0 1px rgba(200,220,235,0.6);}
-  .card-title{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem;}
-  .big-number{font-family:'Playfair Display',serif;font-size:2rem;line-height:1;color:var(--ink);}
-  .big-number.accent{color:var(--accent);} .big-number.gold{color:var(--gold);} .big-number.sky{color:#3a7090;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;transition:border-color 120ms,box-shadow 120ms;}
+  .card:hover{border-color:var(--border-hover);box-shadow:0 2px 12px rgba(14,165,233,0.06);}
+  .card-sky{background:var(--sky-50);border:1px solid var(--sky-200);border-radius:12px;padding:20px 24px;}
+  .card-title{font-family:'Inter',sans-serif;font-size:12px;font-weight:400;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;}
+  .big-number{font-family:'Inter',sans-serif;font-size:28px;font-weight:600;line-height:1;color:var(--text-primary);}
+  .big-number.accent{color:var(--danger);} .big-number.gold{color:var(--warning);} .big-number.sky{color:var(--sky-500);}
   .sub{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;}
   .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.7rem;margin-bottom:1.3rem;}
   @media(min-width:480px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
@@ -222,14 +231,15 @@
   .input-row{display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem;flex-wrap:wrap;}
   .input-row input,.input-row select{font-family:'DM Mono',monospace;font-size:0.83rem;padding:0.48rem 0.6rem;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:8px;flex:1;min-width:65px;-webkit-appearance:none;appearance:none;}
   .input-row input:focus,.input-row select:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
-  .btn{font-family:'DM Mono',monospace;font-size:0.68rem;letter-spacing:0.05em;text-transform:uppercase;padding:0.5rem 0.9rem;border:none;cursor:pointer;border-radius:8px;transition:all 0.15s;white-space:nowrap;touch-action:manipulation;}
-  .btn-primary{background:var(--sky-dark);color:#fff;} .btn-primary:hover{background:#4a8db8;} .btn-primary:active{background:#3a7da8;}
-  .btn-sky{background:var(--sky);color:var(--ink);border:1px solid var(--sky-dark);border-radius:8px;}
-  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--ink);border-radius:8px;}
-  .btn-danger{background:transparent;border:1px solid #e0c0b8;color:var(--accent);border-radius:8px;}
-  .btn-danger:active{background:var(--accent);color:white;}
-  .btn-sm{padding:0.28rem 0.55rem;font-size:0.6rem;}
-  .section-title{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:0.8rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border);}
+  .btn{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;padding:7px 14px;border:none;cursor:pointer;border-radius:8px;transition:all 120ms;white-space:nowrap;touch-action:manipulation;}
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--sky-500);color:#fff;} .btn-primary:hover{background:var(--sky-700);}
+  .btn-sky{background:var(--sky-50);color:var(--sky-700);border:1px solid var(--sky-200);} .btn-sky:hover{border-color:var(--sky-400);}
+  .btn-outline{background:var(--surface);border:1px solid var(--border);color:#334155;} .btn-outline:hover{border-color:#7DD3FC;}
+  .btn-danger{background:transparent;border:1px solid #FECACA;color:var(--danger);} .btn-danger:active{background:var(--danger);color:white;}
+  .btn-ghost{background:none;border:none;color:var(--sky-600);cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;padding:6px 10px;border-radius:6px;} .btn-ghost:hover{background:var(--sky-50);}
+  .btn-sm{padding:4px 10px;font-size:12px;}
+  .section-title{font-family:'Inter',sans-serif;font-size:16px;font-weight:500;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
   .two-col{display:grid;grid-template-columns:1fr;gap:0.9rem;margin-bottom:1.3rem;}
   @media(min-width:560px){.two-col{grid-template-columns:1fr 1fr;}}
   .book-list{display:flex;flex-direction:column;gap:0.35rem;}
@@ -250,18 +260,20 @@
   .edit-toggle{background:none;border:none;cursor:pointer;color:var(--border);font-size:0.95rem;padding:0.1rem 0.28rem;transition:color 0.15s;flex-shrink:0;touch-action:manipulation;}
   .edit-toggle:hover,.edit-toggle:active{color:var(--sky-dark);}
   .log-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
-  .log-table th{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0.45rem 0.6rem;border-bottom:1px solid var(--border);}
-  .log-table td{padding:0.5rem 0.6rem;border-bottom:1px solid var(--cream);}
+  .log-table th{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:10px 12px;background:var(--slate-50);border-bottom:1px solid var(--border);}
+  .log-table td{padding:10px 12px;border-bottom:1px solid var(--slate-100);}
   .log-table tr:last-child td{border-bottom:none;}
+  .log-table tr:hover td{background:var(--sky-50);}
   .delete-btn{background:none;border:none;color:var(--border);cursor:pointer;font-size:1rem;padding:0 0.25rem;transition:color 0.15s;}
   .delete-btn:hover,.delete-btn:active{color:var(--accent);}
   .filter-row{display:flex;gap:0.35rem;flex-wrap:wrap;}
-  .year-tab{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.28rem 0.75rem;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:20px;transition:all 0.15s;touch-action:manipulation;}
-  .year-tab.active{background:var(--sky);color:var(--ink);border-color:var(--sky-dark);font-weight:500;}
+  .year-tab{font-family:'Inter',sans-serif;font-size:13px;padding:4px 12px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;border-radius:999px;transition:all 150ms;touch-action:manipulation;}
+  .year-tab.active{background:var(--sky-100);color:var(--sky-700);border-color:var(--sky-200);font-weight:500;}
+  .year-tab:hover:not(.active){border-color:var(--sky-200);}
   .chart-wrap{position:relative;height:200px;margin:0.7rem 0;}
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--sky);color:var(--ink);border:1px solid var(--sky-dark);padding:0.6rem 1.3rem;border-radius:20px;font-family:'DM Mono',monospace;font-size:0.76rem;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);color:var(--text-primary);border:1px solid var(--border);padding:10px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-  .empty{text-align:center;padding:1.8rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;}
+  .empty{text-align:center;padding:32px;color:var(--text-muted);font-size:13px;}
   .divider{height:1px;background:var(--border);margin:1.2rem 0;}
   .pacing-box{margin-top:0.7rem;padding:0.55rem 0.85rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:10px;font-size:0.8rem;line-height:1.5;}
   .book-item.reading{background:var(--sky-light);box-shadow:0 1px 3px rgba(0,0,0,0.05),0 0 0 1.5px var(--sky-dark);}
@@ -329,16 +341,52 @@
   .speed-insight{margin-top:0.65rem;padding:0.55rem 0.75rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:10px;font-size:0.8rem;line-height:1.55;font-style:italic;color:var(--ink);}
   /* ── Login Screen ── */
   #login-screen{display:none;position:fixed;inset:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
-  .login-card{background:var(--card);border:none;border-radius:16px;padding:2.5rem 2rem;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.1);}
-  .login-logo{font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:500;color:var(--ink);margin-bottom:0.3rem;}
-  .login-sub{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2rem;}
-  .login-btn{display:flex;align-items:center;justify-content:center;gap:0.7rem;width:100%;padding:0.75rem 1rem;background:var(--sky-dark);color:#fff;border:none;border-radius:8px;font-family:'DM Mono',monospace;font-size:0.78rem;letter-spacing:0.05em;cursor:pointer;transition:opacity 0.15s;}
-  .login-btn:hover{opacity:0.85;}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
+  .login-logo{font-family:'Inter',sans-serif;font-size:22px;font-weight:600;color:var(--sky-500);margin-bottom:4px;}
+  .login-sub{font-family:'Inter',sans-serif;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:32px;}
+  .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:10px 16px;background:var(--sky-500);color:#fff;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;transition:background 150ms;}
+  .login-btn:hover{background:var(--sky-700);}
   .login-btn svg{width:18px;height:18px;flex-shrink:0;}
-  .login-error{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--accent);margin-top:1rem;min-height:1em;}
+  .login-error{font-family:'Inter',sans-serif;font-size:13px;color:var(--danger);margin-top:16px;min-height:1em;}
   /* ── Logout Button ── */
-  .btn-logout{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:0.25rem 0.5rem;border-radius:6px;transition:color 0.15s;}
-  .btn-logout:hover{color:var(--accent);}
+  .btn-logout{background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;color:var(--text-secondary);padding:6px 12px;border-radius:6px;transition:background 150ms,color 150ms;}
+  .btn-logout:hover{background:var(--sky-50);color:var(--sky-700);}
+  /* ── Knowledge Base ── */
+  .kb-layout{display:flex;min-height:calc(100vh - 56px - 96px);border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);}
+  .kb-sidebar{width:300px;flex-shrink:0;background:var(--slate-50);border-right:1px solid var(--border);display:flex;flex-direction:column;}
+  .kb-search{font-family:'Inter',sans-serif;font-size:14px;height:40px;padding:0 14px;border:none;border-bottom:1px solid var(--border);background:var(--surface);color:var(--text-primary);outline:none;width:100%;transition:box-shadow 150ms;}
+  .kb-search:focus{box-shadow:inset 0 -2px 0 var(--sky-500);}
+  .kb-sub-tabs{display:flex;border-bottom:1px solid var(--border);}
+  .kb-sub-tab{flex:1;font-family:'Inter',sans-serif;font-size:13px;padding:10px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;transition:all 150ms;}
+  .kb-sub-tab.active{color:var(--sky-700);border-bottom-color:var(--sky-500);background:var(--surface);}
+  .kb-list{flex:1;overflow-y:auto;}
+  .kb-list-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 120ms;border-left:2px solid transparent;}
+  .kb-list-item:hover{background:var(--sky-50);}
+  .kb-list-item.active{background:var(--sky-50);border-left-color:var(--sky-500);}
+  .kb-item-title{font-size:14px;color:#1E293B;margin-bottom:2px;}
+  .kb-item-sub{font-size:12px;color:var(--text-muted);}
+  .kb-item-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+  .kb-detail{flex:1;padding:28px 32px;overflow-y:auto;}
+  .kb-detail-empty{display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--text-muted);font-size:14px;}
+  .kb-detail-title{font-size:22px;font-weight:600;color:var(--text-primary);margin-bottom:6px;}
+  .kb-ai-card{background:var(--sky-50);border:1px solid var(--sky-200);border-radius:10px;padding:16px 20px;margin-bottom:20px;}
+  .kb-ai-label{font-size:12px;color:var(--sky-600);letter-spacing:0.05em;font-weight:500;margin-bottom:8px;display:block;}
+  .kb-ai-text{font-size:14px;color:#334155;line-height:1.8;white-space:pre-wrap;}
+  .kb-ai-skeleton{height:80px;background:linear-gradient(90deg,var(--sky-100) 25%,var(--sky-50) 50%,var(--sky-100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  .kb-section-title{font-size:12px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin:20px 0 10px;}
+  .kb-concepts-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .kb-concept-chip{font-size:13px;padding:4px 12px;background:var(--sky-100);color:var(--sky-700);border:1px solid var(--sky-200);border-radius:999px;cursor:pointer;transition:background 120ms;}
+  .kb-concept-chip:hover{background:var(--sky-200);}
+  .kb-notes-area,.kb-concept-def{width:100%;font-family:'Inter',sans-serif;font-size:14px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;color:var(--text-primary);background:var(--surface);line-height:1.6;transition:border-color 150ms,box-shadow 150ms;resize:vertical;}
+  .kb-notes-area{min-height:100px;}
+  .kb-notes-area:focus,.kb-concept-def:focus{outline:none;border-color:var(--sky-500);box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
+  .kb-books-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .kb-book-ref{display:inline-flex;flex-direction:column;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color 120ms;white-space:nowrap;}
+  .kb-book-ref:hover{border-color:var(--sky-200);}
+  .kb-book-ref-title{font-size:13px;font-weight:500;color:var(--text-primary);}
+  .kb-book-ref-author{font-size:12px;color:var(--text-muted);}
+  @media(max-width:700px){.kb-sidebar{width:100%;}.kb-layout{flex-direction:column;}}
 </style>
 </head>
 <body>
@@ -369,26 +417,23 @@
 <div id="offline-banner">⚠ Kein Internet – Änderungen werden lokal gespeichert</div>
 
 <div id="app" style="display:none">
-<header>
-  <div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.15em;color:#5a7888;text-transform:uppercase;margin-bottom:0.25rem">Crescendo</div>
-    <h1>Crescendo</h1>
-  </div>
-  <div class="hdr-right">
-    <div class="hdr-year" id="header-year">2026</div>
-    <div class="hdr-date" id="header-date"></div>
+<header id="topbar">
+  <div id="topbar-logo">Crescendo</div>
+  <nav id="topbar-nav">
+    <button class="active" onclick="switchTab('today',this)">Tages-Log</button>
+    <button onclick="switchTab('goal',this)">Jahres-Tracker</button>
+    <button onclick="switchTab('books',this)">Bibliothek</button>
+    <button onclick="switchTab('years',this)">Statistiken</button>
+    <button onclick="switchTab('stats',this)">Insights</button>
+    <button onclick="switchTab('kb',this)">Knowledge Base</button>
+  </nav>
+  <div id="topbar-right">
     <div id="sync-status"></div>
-    <button class="btn-logout" onclick="signOutUser()" title="Abmelden">Abmelden</button>
+    <div id="header-date" style="display:none"></div>
+    <div id="header-year" style="display:none"></div>
+    <button class="btn-logout" onclick="signOutUser()">Abmelden</button>
   </div>
 </header>
-
-<nav>
-  <button class="active" onclick="switchTab('today',this)">📖 Heute</button>
-  <button onclick="switchTab('goal',this)">🎯 Ziel</button>
-  <button onclick="switchTab('books',this)">📚 Bücher</button>
-  <button onclick="switchTab('years',this)">📊 Jahre</button>
-  <button onclick="switchTab('stats',this)">✦ Statistik</button>
-</nav>
 
 <main>
 <!-- HEUTE -->
@@ -570,6 +615,26 @@
   <div class="section-title">Lesegeschwindigkeit nach Buchtyp</div>
   <div class="card" id="stat-speed-by-type"></div>
 </div>
+
+<!-- KNOWLEDGE BASE -->
+<div id="tab-kb" class="tab-content">
+  <div class="kb-layout">
+    <div class="kb-sidebar">
+      <input type="text" id="kb-search" class="kb-search" placeholder="Suchen…" oninput="filterKBList()">
+      <div class="kb-sub-tabs">
+        <button class="kb-sub-tab active" onclick="switchKbTab('books',this)">Bücher</button>
+        <button class="kb-sub-tab" onclick="switchKbTab('concepts',this)">Konzepte</button>
+      </div>
+      <div class="kb-list" id="kb-list"></div>
+      <div class="kb-new-concept-btn">
+        <button class="btn btn-ghost" onclick="createNewConcept()" id="kb-new-btn" style="display:none;width:100%;text-align:left">+ Neues Konzept</button>
+      </div>
+    </div>
+    <div class="kb-detail" id="kb-detail">
+      <div class="kb-detail-empty">Buch oder Konzept aus der Liste auswählen</div>
+    </div>
+  </div>
+</div>
 </main>
 </div>
 
@@ -647,7 +712,7 @@
 const BOOK_TYPES=['Roman','Sachbuch','Biografie','Krimi','Fantasy','Lyrik','Sonstiges'];
 const CURRENT_YEAR=new Date().getFullYear();
 
-window._defaultData=function(){return{books:[],logs:[],goals:{},nextId:1};};
+window._defaultData=function(){return{books:[],logs:[],goals:{},concepts:[],nextId:1};};
 
 Object.defineProperty(window,'state',{get(){return window._state;},set(v){window._state=v;}});
 function save(){window.saveToFirebase();}
@@ -676,9 +741,10 @@ window.addEventListener('online',()=>{document.getElementById('offline-banner').
 
 function switchTab(tab,btn){
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('#topbar-nav button').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
-  btn.classList.add('active');refreshAll();
+  btn.classList.add('active');
+  if(tab==='kb')renderKB();else refreshAll();
 }
 
 let positionMode='page'; // 'page' | 'percent'
@@ -1404,7 +1470,196 @@ Erstelle eine strukturierte Zusammenfassung (max. 200 Wörter) der wichtigsten G
 }
 // ── End KI-Zusammenfassung ───────────────────────────────
 
-window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();checkYesterdayBanner();};
+// ── Knowledge Base ────────────────────────────────────────
+let _kbTab='books', _kbSelected=null, _kbSelectedType=null;
+
+function renderKB(){
+  const search=(document.getElementById('kb-search')||{}).value||'';
+  renderKBList(search);
+  const newBtn=document.getElementById('kb-new-btn');
+  if(newBtn) newBtn.style.display=_kbTab==='concepts'?'':'none';
+}
+
+function renderKBList(search=''){
+  const list=document.getElementById('kb-list');
+  if(!list)return;
+  search=search.toLowerCase();
+  if(_kbTab==='books'){
+    const books=state.books.filter(b=>b.status==='done'||b.notes||(b.aiSummary)||((b.quotes||[]).length>0));
+    const filtered=search?books.filter(b=>(b.title||'').toLowerCase().includes(search)||(b.author||'').toLowerCase().includes(search)):books;
+    list.innerHTML=filtered.length?filtered.map(b=>`
+      <div class="kb-list-item${_kbSelected===b.id&&_kbSelectedType==='book'?' active':''}" onclick="selectKBItem('book',${b.id})">
+        <div class="kb-item-title">${cap(b.title)}</div>
+        <div class="kb-item-sub">${b.author||''}</div>
+        ${(b.keywords||[]).length?`<div class="kb-item-tags">${b.keywords.slice(0,3).map(k=>`<span class="keyword-tag" style="font-size:11px">${k}</span>`).join('')}</div>`:''}
+      </div>`).join(''):`<div class="empty">Keine Bücher mit Notizen</div>`;
+  } else {
+    const concepts=search?state.concepts.filter(c=>(c.name||'').toLowerCase().includes(search)):state.concepts;
+    list.innerHTML=concepts.length?concepts.map(c=>`
+      <div class="kb-list-item${_kbSelected===c.id&&_kbSelectedType==='concept'?' active':''}" onclick="selectKBItem('concept',${c.id})">
+        <div class="kb-item-title">${c.name}</div>
+        <div class="kb-item-sub">${(c.linkedBooks||[]).length} Bücher verknüpft</div>
+      </div>`).join(''):`<div class="empty">Noch keine Konzepte</div>`;
+  }
+}
+
+function filterKBList(){renderKB();}
+
+function switchKbTab(tab,btn){
+  _kbTab=tab;
+  document.querySelectorAll('.kb-sub-tab').forEach(el=>el.classList.remove('active'));
+  btn.classList.add('active');
+  _kbSelected=null;_kbSelectedType=null;
+  document.getElementById('kb-detail').innerHTML='<div class="kb-detail-empty">Buch oder Konzept aus der Liste auswählen</div>';
+  renderKB();
+}
+
+function selectKBItem(type,id){
+  _kbSelected=id;_kbSelectedType=type;
+  renderKBList((document.getElementById('kb-search')||{}).value||'');
+  if(type==='book') renderKBBookDetail(id);
+  else renderKBConceptDetail(id);
+}
+
+function renderKBBookDetail(bookId){
+  const b=state.books.find(x=>x.id===bookId);
+  if(!b)return;
+  const detail=document.getElementById('kb-detail');
+  const concepts=state.concepts;
+  const linked=(b.linkedConcepts||[]).map(cid=>concepts.find(c=>c.id===cid)).filter(Boolean);
+  const unlinked=concepts.filter(c=>!(b.linkedConcepts||[]).includes(c.id));
+  detail.innerHTML=`
+    <div class="kb-detail-title">${cap(b.title)}</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">${b.author||''} ${b.year?'· '+b.year:''}</div>
+    ${b.aiSummary?`
+    <div class="kb-ai-card">
+      <span class="kb-ai-label">✦ KI-Zusammenfassung</span>
+      <div class="kb-ai-text">${b.aiSummary}</div>
+    </div>`:`
+    <div class="kb-ai-card" style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <span class="kb-ai-label">✦ KI-Zusammenfassung</span>
+        <div style="font-size:13px;color:var(--text-muted)">Noch keine Zusammenfassung generiert</div>
+      </div>
+      <button class="btn btn-sky btn-sm" id="kb-gen-btn" onclick="kbGenerateSummary(${bookId})">Generieren</button>
+    </div>`}
+    ${(b.quotes||[]).length?`
+    <div class="kb-section-title">Zitate</div>
+    ${b.quotes.map(q=>`
+      <div class="quote-item" style="margin-bottom:8px">
+        <blockquote>${q.text}</blockquote>
+        ${q.page?`<div class="quote-page">S. ${q.page}</div>`:''}
+      </div>`).join('')}`:''}
+    <div class="kb-section-title">Notizen</div>
+    <textarea class="kb-notes-area" id="kb-book-notes" onblur="saveKBBookNotes(${bookId})">${b.notes||''}</textarea>
+    <div class="kb-section-title">Verknüpfte Konzepte</div>
+    <div class="kb-concepts-chips" id="kb-linked-chips">
+      ${linked.map(c=>`<span class="kb-concept-chip" onclick="selectKBItem('concept',${c.id})">${c.name} ×</span>`).join('')}
+    </div>
+    ${unlinked.length?`
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="kb-link-select" class="bm-input" style="height:34px;max-width:220px;padding:0 8px">
+        <option value="">Konzept verknüpfen…</option>
+        ${unlinked.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-sky btn-sm" onclick="linkConceptToBook(${bookId})">Verknüpfen</button>
+    </div>`:''}`;
+}
+
+function renderKBConceptDetail(conceptId){
+  const c=state.concepts.find(x=>x.id===conceptId);
+  if(!c)return;
+  const linkedBooks=(c.linkedBooks||[]).map(bid=>state.books.find(b=>b.id===bid)).filter(Boolean);
+  const related=(c.relatedConcepts||[]).map(rid=>state.concepts.find(x=>x.id===rid)).filter(Boolean);
+  document.getElementById('kb-detail').innerHTML=`
+    <div class="kb-detail-title" contenteditable="true" onblur="saveConceptName(${c.id},this.textContent)">${c.name}</div>
+    <div class="kb-section-title">Definition</div>
+    <input class="kb-concept-def" value="${(c.definition||'').replace(/"/g,'&quot;')}" placeholder="Kurze Definition…" onblur="saveConceptDef(${c.id},this.value)">
+    <div class="kb-section-title">Notizen</div>
+    <textarea class="kb-notes-area" onblur="saveConceptNotes(${c.id},this.value)">${c.notes||''}</textarea>
+    <div class="kb-section-title">Erwähnt in</div>
+    <div class="kb-books-scroll">
+      ${linkedBooks.length?linkedBooks.map(b=>`
+        <div class="kb-book-ref" onclick="selectKBItem('book',${b.id})">
+          <span class="kb-book-ref-title">${cap(b.title)}</span>
+          <span class="kb-book-ref-author">${b.author||''}</span>
+        </div>`).join(''):'<span style="font-size:13px;color:var(--text-muted)">Noch keine Bücher verknüpft</span>'}
+    </div>
+    ${related.length?`
+    <div class="kb-section-title">Verwandte Konzepte</div>
+    <div class="kb-concepts-chips">
+      ${related.map(r=>`<span class="kb-concept-chip" onclick="selectKBItem('concept',${r.id})">${r.name}</span>`).join('')}
+    </div>`:''}
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-danger btn-sm" onclick="deleteConcept(${c.id})">Konzept löschen</button>
+    </div>`;
+}
+
+function kbGenerateSummary(bookId){
+  const btn=document.getElementById('kb-gen-btn');
+  if(btn){btn.disabled=true;btn.textContent='Generiere…';}
+  const cardContent=btn?btn.closest('.kb-ai-card'):null;
+  if(cardContent){cardContent.innerHTML=`<span class="kb-ai-label">✦ KI-Zusammenfassung</span><div class="kb-ai-skeleton"></div>`;}
+  generateBookSummary(bookId).then?.(()=>renderKBBookDetail(bookId)).catch?.(()=>renderKBBookDetail(bookId));
+  // generateBookSummary is async, re-render after Firebase sync
+  setTimeout(()=>renderKBBookDetail(bookId),8000);
+}
+
+function saveKBBookNotes(bookId){
+  const b=state.books.find(x=>x.id===bookId);
+  if(!b)return;
+  const val=(document.getElementById('kb-book-notes')||{}).value;
+  if(val!==undefined){b.notes=val;save();}
+}
+
+function createNewConcept(){
+  const name=prompt('Name des Konzepts:');
+  if(!name||!name.trim())return;
+  const id=state.nextId++;
+  state.concepts.push({id,name:name.trim(),definition:'',notes:'',linkedBooks:[],relatedConcepts:[],createdAt:Date.now()});
+  save();
+  _kbTab='concepts';
+  document.querySelectorAll('.kb-sub-tab').forEach((el,i)=>{el.classList.toggle('active',i===1);});
+  document.getElementById('kb-new-btn').style.display='';
+  _kbSelected=id;_kbSelectedType='concept';
+  renderKB();
+  renderKBConceptDetail(id);
+}
+
+function saveConceptName(id,name){
+  const c=state.concepts.find(x=>x.id===id);
+  if(c&&name.trim()){c.name=name.trim();save();renderKBList();}
+}
+function saveConceptDef(id,val){const c=state.concepts.find(x=>x.id===id);if(c){c.definition=val;save();}}
+function saveConceptNotes(id,val){const c=state.concepts.find(x=>x.id===id);if(c){c.notes=val;save();}}
+
+function linkConceptToBook(bookId){
+  const sel=document.getElementById('kb-link-select');
+  if(!sel||!sel.value)return;
+  const conceptId=+sel.value;
+  const b=state.books.find(x=>x.id===bookId);
+  const c=state.concepts.find(x=>x.id===conceptId);
+  if(!b||!c)return;
+  if(!b.linkedConcepts)b.linkedConcepts=[];
+  if(!c.linkedBooks)c.linkedBooks=[];
+  if(!b.linkedConcepts.includes(conceptId))b.linkedConcepts.push(conceptId);
+  if(!c.linkedBooks.includes(bookId))c.linkedBooks.push(bookId);
+  save();
+  renderKBBookDetail(bookId);
+}
+
+function deleteConcept(id){
+  if(!confirm('Konzept löschen?'))return;
+  state.concepts=state.concepts.filter(c=>c.id!==id);
+  state.books.forEach(b=>{if(b.linkedConcepts)b.linkedConcepts=b.linkedConcepts.filter(cid=>cid!==id);});
+  save();
+  _kbSelected=null;_kbSelectedType=null;
+  document.getElementById('kb-detail').innerHTML='<div class="kb-detail-empty">Konzept wurde gelöscht</div>';
+  renderKBList();
+}
+// ── End Knowledge Base ────────────────────────────────────
+
+window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();checkYesterdayBanner()};
 
 window.initApp=function(){
   document.getElementById('loading-screen').style.display='none';
