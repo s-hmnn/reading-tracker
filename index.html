@@ -292,6 +292,31 @@
   #bm-keyword-dd{position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--card);border:1px solid var(--border);border-radius:0 0 5px 5px;max-height:160px;overflow-y:auto;}
   #bm-keyword-dd div{padding:0.42rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;}
   #bm-keyword-dd div:hover,#bm-keyword-dd div.kw-active{background:var(--sky-light);}
+  /* ── Reading Progress Bar ── */
+  .book-progress-label{font-family:'DM Mono',monospace;font-size:0.58rem;color:#3a7090;padding:0.15rem 0.85rem 0.22rem;letter-spacing:0.02em;}
+  .book-progress-bar{height:3px;background:var(--cream);border-radius:0 0 4px 4px;overflow:hidden;}
+  .book-progress-bar-fill{height:100%;background:var(--sky-dark);border-radius:0 0 4px 4px;transition:width 0.4s ease;}
+  /* ── Quotes Tab ── */
+  .quote-item{border:1px solid var(--border);border-radius:5px;padding:0.65rem 2rem 0.65rem 0.75rem;margin-bottom:0.5rem;background:var(--sky-light);position:relative;}
+  .quote-item blockquote{font-family:'Playfair Display',serif;font-style:italic;font-size:0.88rem;line-height:1.55;color:var(--ink);margin:0 0 0.25rem 0;}
+  .quote-item .quote-page{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);}
+  .quote-del{position:absolute;top:0.45rem;right:0.5rem;background:none;border:none;color:var(--border);cursor:pointer;font-size:1rem;padding:0 0.2rem;line-height:1;transition:color 0.15s;}
+  .quote-del:hover{color:var(--accent);}
+  .quote-add-form{margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.8rem;}
+  .quote-add-form textarea{width:100%;font-family:'Playfair Display',serif;font-style:italic;font-size:0.85rem;padding:0.5rem 0.65rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:5px;resize:vertical;min-height:65px;box-sizing:border-box;}
+  .quote-add-form textarea:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
+  .quote-form-row{display:flex;gap:0.5rem;margin-top:0.45rem;align-items:center;}
+  .quote-form-row input{font-family:'DM Mono',monospace;font-size:0.78rem;padding:0.4rem 0.55rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:5px;width:90px;}
+  /* ── Speed by Type ── */
+  .speed-type-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:0.6rem;}
+  .speed-type-table th{font-family:'DM Mono',monospace;font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid var(--border);}
+  .speed-type-table td{padding:0.42rem 0.5rem;border-bottom:1px solid var(--cream);vertical-align:middle;}
+  .speed-type-table tr:last-child td{border-bottom:none;}
+  .speed-bar-mini{height:4px;background:var(--cream);border-radius:3px;overflow:hidden;margin-top:0.22rem;width:100%;}
+  .speed-bar-mini-fill{height:100%;border-radius:3px;background:var(--sky-dark);}
+  .speed-bar-mini-fill.fastest{background:var(--success);}
+  .speed-bar-mini-fill.slowest{background:var(--accent);}
+  .speed-insight{margin-top:0.65rem;padding:0.55rem 0.75rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:4px;font-size:0.8rem;line-height:1.55;font-style:italic;color:var(--ink);}
   /* ── Login Screen ── */
   #login-screen{display:none;position:fixed;inset:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
   .login-card{background:var(--paper);border:1px solid var(--sky-dark);border-radius:10px;padding:2.5rem 2rem;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.08);}
@@ -518,6 +543,9 @@
   <div class="divider"></div>
   <div class="section-title">Keywords</div>
   <div class="card"><div id="stat-keywords" style="padding:0.3rem 0"></div></div>
+  <div class="divider"></div>
+  <div class="section-title">Lesegeschwindigkeit nach Buchtyp</div>
+  <div class="card" id="stat-speed-by-type"></div>
 </div>
 </main>
 </div>
@@ -535,6 +563,7 @@
     <div id="book-modal-tabs">
       <button class="active" onclick="switchBookModalTab('details',this)">Details</button>
       <button onclick="switchBookModalTab('verlauf',this)">Verlauf</button>
+      <button onclick="switchBookModalTab('zitate',this)">Zitate</button>
     </div>
     <div id="bmt-details" class="bm-tab active">
       <div class="bm-field">
@@ -569,6 +598,17 @@
         <tbody id="bm-log-body"></tbody>
       </table>
       <div class="empty" id="bm-log-empty" style="display:none">Noch keine Leseeinträge</div>
+    <div id="bmt-zitate" class="bm-tab">
+      <div id="bm-quotes-list"></div>
+      <div class="quote-add-form">
+        <label class="bm-label">Neues Zitat</label>
+        <textarea id="bm-quote-text" placeholder="Zitat eingeben…" rows="3"></textarea>
+        <div class="quote-form-row">
+          <input type="number" id="bm-quote-page" placeholder="Seite (opt.)" min="1" max="9999">
+          <button class="btn btn-primary btn-sm" onclick="addQuote()">+ Hinzufügen</button>
+        </div>
+      </div>
+    </div>
     </div>
   </div>
 </div>
@@ -796,6 +836,17 @@ function addBook(){
   toast('Buch hinzugefügt ✓');renderBooks();populateBookSelect();
 }
 
+function getBookProgress(book){
+  if(book.status!=='reading'||!book.pages)return null;
+  const last=getLastPosition(book.id);
+  if(!last)return null;
+  const pct=last.type==='percent'
+    ?Math.min(100,Math.max(0,last.position))
+    :Math.min(100,Math.max(0,Math.round(last.position/book.pages*100)));
+  const label=last.type==='percent'?`${last.position}%`:`S. ${last.position} / ${book.pages}`;
+  return{pct,label};
+}
+
 function renderBooks(){
   const years=allYears(),fc=document.getElementById('books-year-filter');
   if(fc){const all=booksYF.size===0;
@@ -812,8 +863,9 @@ function renderBooks(){
   const list=document.getElementById('book-list');
   if(!books.length){list.innerHTML='<div class="empty">Keine Bücher</div>';return;}
   const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
-  list.innerHTML=books.map(b=>`
-    <div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':''}" data-id="${b.id}">
+  list.innerHTML=books.map(b=>{
+    const prog=getBookProgress(b);
+    return`<div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':''}" data-id="${b.id}">
       <div class="book-item-row" onclick="openBookModal(${b.id})">
         <div class="book-check" onclick="event.stopPropagation();toggleBookDone(${b.id})">${b.status==='done'?'✓':''}</div>
         <div style="flex:1;min-width:0"><div class="book-title">${cap(b.title)}</div>${b.author?`<div class="book-meta">${b.author}</div>`:''}</div>
@@ -831,7 +883,9 @@ function renderBooks(){
         <button class="btn btn-sky btn-sm" onclick="saveBookEdit(${b.id})">OK</button>
         <button class="btn btn-danger btn-sm" onclick="deleteBook(${b.id},event)">✕</button>
       </div>
-    </div>`).join('');
+      ${prog?`<div class="book-progress-label">${prog.label}</div><div class="book-progress-bar"><div class="book-progress-bar-fill" style="width:${prog.pct}%"></div></div>`:''}
+    </div>`;
+  }).join('');
 }
 
 let charts={},selCY=new Set(),selMY=new Set();
@@ -965,10 +1019,61 @@ function renderStats(){
         }).join('')+'</div>';
     }
   }
+  renderSpeedByType();
 }
 
+// ── Speed by Type ────────────────────────────────────────
+function computeSpeedByType(){
+  const bookLogs={};
+  state.logs.forEach(l=>{if(!bookLogs[l.bookId])bookLogs[l.bookId]=[];bookLogs[l.bookId].push(l);});
+  const typeStats={};
+  Object.entries(bookLogs).forEach(([bookId,logs])=>{
+    const book=state.books.find(b=>b.id===parseInt(bookId));
+    if(!book||!book.type)return;
+    const activeDays=new Set(logs.map(l=>l.date)).size;
+    const totalPages=logs.reduce((s,l)=>s+(l.pages||0),0);
+    if(!typeStats[book.type])typeStats[book.type]={totalPages:0,totalActiveDays:0};
+    typeStats[book.type].totalPages+=totalPages;
+    typeStats[book.type].totalActiveDays+=activeDays;
+  });
+  return Object.entries(typeStats)
+    .map(([type,{totalPages,totalActiveDays}])=>({type,totalPages,activeDays:totalActiveDays,pagesPerDay:totalActiveDays>0?totalPages/totalActiveDays:0}))
+    .filter(r=>r.pagesPerDay>0)
+    .sort((a,b)=>b.pagesPerDay-a.pagesPerDay);
+}
+function renderSpeedByType(){
+  const el=document.getElementById('stat-speed-by-type');
+  if(!el)return;
+  const results=computeSpeedByType();
+  if(results.length<2){
+    el.innerHTML='<div class="empty" style="padding:0.8rem">Nicht genug Daten – mindestens 2 Buchtypen mit Leseeinträgen nötig</div>';
+    return;
+  }
+  const avg=results.reduce((s,r)=>s+r.pagesPerDay,0)/results.length;
+  const fastest=results[0],slowest=results[results.length-1];
+  const maxPpd=fastest.pagesPerDay;
+  const rows=results.map((r,i)=>{
+    const isFastest=i===0,isSlowest=i===results.length-1;
+    const barClass=isFastest?'fastest':isSlowest?'slowest':'';
+    const rel=(r.pagesPerDay-avg)/avg*100;
+    const relStr=rel>=0?`<span style="color:var(--success)">+${Math.round(rel)}%</span>`:`<span style="color:var(--accent)">${Math.round(rel)}%</span>`;
+    return`<tr>
+      <td>${r.type}${isFastest?' ▲':isSlowest?' ▼':''}
+        <div class="speed-bar-mini"><div class="speed-bar-mini-fill ${barClass}" style="width:${Math.round(r.pagesPerDay/maxPpd*100)}%"></div></div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;text-align:right;white-space:nowrap">${Math.round(r.pagesPerDay)} S./Tag</td>
+      <td style="font-family:'DM Mono',monospace;text-align:right">${relStr}</td>
+    </tr>`;
+  }).join('');
+  const diffPct=Math.round((fastest.pagesPerDay-slowest.pagesPerDay)/fastest.pagesPerDay*100);
+  el.innerHTML=`<table class="speed-type-table">
+    <thead><tr><th>Buchtyp</th><th style="text-align:right">Tempo</th><th style="text-align:right">vs. Ø</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="speed-insight">${cap(slowest.type)}bücher liest du ${diffPct}% langsamer als ${fastest.type}bücher (${Math.round(slowest.pagesPerDay)} vs. ${Math.round(fastest.pagesPerDay)} S./Tag).</div>`;
+}
 // ── Book Detail Modal ────────────────────────────────────
-let _bmBookId=null,_bmRating=0,_bmKeywords=[],_kDropIdx=-1;
+let _bmBookId=null,_bmRating=0,_bmKeywords=[],_kDropIdx=-1,_bmQuotes=[];
 
 function getAllKeywords(){
   const kw=new Set();
@@ -1050,6 +1155,7 @@ function openBookModal(id){
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-notes').value=b.notes||'';
   renderStarWidget(b.rating||0);
+  _bmQuotes=[...(b.quotes||[])];
   renderKeywordTags();
   document.getElementById('bm-keyword-input').value='';
   document.getElementById('bm-keyword-dd').style.display='none';
@@ -1077,6 +1183,7 @@ function switchBookModalTab(tab,btn){
   if(t){t.style.display='block';t.classList.add('active');}
   btn.classList.add('active');
   if(tab==='verlauf')renderBookVerlauf(_bmBookId);
+  if(tab==='zitate')renderQuotesList();
 }
 
 function saveBookDetails(){
@@ -1087,6 +1194,7 @@ function saveBookDetails(){
   b.notes=document.getElementById('bm-notes').value.trim();
   b.rating=_bmRating;
   b.keywords=[..._bmKeywords];
+  b.quotes=[..._bmQuotes];
   save();toast('Gespeichert ✓');
   document.getElementById('book-modal').style.display='none';
   document.body.style.overflow='';
@@ -1112,6 +1220,31 @@ function renderBookVerlauf(bookId){
     return`<tr><td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td><td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted)">${pos}</td></tr>`;
   }).join('');
 }
+// ── Quotes ───────────────────────────────────────────────
+function renderQuotesList(){
+  const wrap=document.getElementById('bm-quotes-list');
+  if(!wrap)return;
+  if(!_bmQuotes.length){
+    wrap.innerHTML='<div class="empty" style="padding:0.6rem 0">Noch keine Zitate gespeichert</div>';
+    return;
+  }
+  wrap.innerHTML=_bmQuotes.map((q,i)=>`
+    <div class="quote-item">
+      <button class="quote-del" onclick="deleteQuote(${i})">×</button>
+      <blockquote>„${q.text}"</blockquote>
+      ${q.page?`<div class="quote-page">S. ${q.page}</div>`:''}
+    </div>`).join('');
+}
+function addQuote(){
+  const text=document.getElementById('bm-quote-text').value.trim();
+  if(!text){toast('Zitat eingeben!');return;}
+  const page=parseInt(document.getElementById('bm-quote-page').value)||undefined;
+  _bmQuotes.push(page?{text,page}:{text});
+  document.getElementById('bm-quote-text').value='';
+  document.getElementById('bm-quote-page').value='';
+  renderQuotesList();
+}
+function deleteQuote(idx){_bmQuotes.splice(idx,1);renderQuotesList();}
 // ── End Book Detail Modal ────────────────────────────────
 
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();};
