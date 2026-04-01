@@ -2,7 +2,7 @@
   "name": "Crescendo",
   "short_name": "Crescendo",
   "description": "Persönlicher Lesezähler und Büchertracker",
-  "start_url": "./reading-dashboard.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#C9DDEB",
   "theme_color": "#C9DDEB",
