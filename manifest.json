@@ -1,6 +1,6 @@
 {
-  "name": "Reading Tracker",
-  "short_name": "Reading",
+  "name": "Crescendo",
+  "short_name": "Crescendo",
   "description": "Persönlicher Lesezähler und Büchertracker",
   "start_url": "./reading-dashboard.html",
   "display": "standalone",
