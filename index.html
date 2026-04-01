@@ -104,7 +104,7 @@
     } catch(e){
       console.error(e);
       setStatus('⚠ Offline – lokale Daten','var(--accent)');
-      try{window._state=sanitizeState(JSON.parse(localStorage.getItem('reading_tracker_v3')))||window._defaultData();}
+      try{window._state=sanitizeState(JSON.parse(localStorage.getItem('reading_tracker_v3_'+currentUser.uid)))||window._defaultData();}
       catch{window._state=window._defaultData();}
     }
     window._firebaseReady=true;
@@ -128,7 +128,7 @@
     if(!window._firebaseReady||!currentUser)return;
     setStatus('⟳ Speichert…');
     try{
-      localStorage.setItem('reading_tracker_v3',JSON.stringify(window._state));
+      localStorage.setItem('reading_tracker_v3_'+currentUser.uid,JSON.stringify(window._state));
       await set(ref(db, dbPath()), window._state);
       setStatus('✓ Gespeichert','var(--success)');
       setTimeout(()=>setStatus(''),2000);
