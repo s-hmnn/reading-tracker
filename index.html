@@ -70,14 +70,21 @@
   }
 
   // Einmalige Migration: root 'tracker/' → users/{uid}/tracker
+  // Läuft nur für Matilde, da die Ausgangsdaten ihr gehören
+  const MIGRATION_EMAIL = 'cap.matilde@gmail.com';
   async function migrateIfNeeded(){
-    const userSnap = await get(ref(db, dbPath()));
-    if(!userSnap.exists()){
-      const rootSnap = await get(ref(db, 'tracker'));
-      if(rootSnap.exists()){
-        await set(ref(db, dbPath()), rootSnap.val());
-        setStatus('✓ Daten migriert','var(--success)');
+    if(currentUser.email !== MIGRATION_EMAIL) return;
+    try{
+      const userSnap = await get(ref(db, dbPath()));
+      if(!userSnap.exists()){
+        const rootSnap = await get(ref(db, 'tracker'));
+        if(rootSnap.exists()){
+          await set(ref(db, dbPath()), rootSnap.val());
+          setStatus('✓ Daten migriert','var(--success)');
+        }
       }
+    } catch(e){
+      console.warn('Migration nicht möglich (Berechtigungen):', e.message);
     }
   }
 
