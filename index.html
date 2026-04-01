@@ -99,6 +99,8 @@
         window._state=sanitizeState(window._defaultData());
         await set(ref(db, dbPath()), window._state);
       }
+      const keySnap=await get(ref(db,'config/anthropicKey'));
+      if(keySnap.exists()) window._anthropicKey=keySnap.val();
       setStatus('✓ Synchronisiert','var(--success)');
       setTimeout(()=>setStatus(''),3000);
     } catch(e){
@@ -1347,9 +1349,6 @@ function deleteQuote(idx){_bmQuotes.splice(idx,1);renderQuotesList();}
 // ── End Book Detail Modal ────────────────────────────────
 
 // ── KI-Zusammenfassung ───────────────────────────────────
-// ⚠️  API Key hier eintragen – später durch Cloud Function ersetzen
-const ANTHROPIC_API_KEY = 'HIER_DEINEN_KEY_EINTRAGEN';
-
 async function generateBookSummary(bookId) {
   const btn = document.getElementById('bm-ai-btn');
   const display = document.getElementById('bm-ai-summary');
@@ -1357,6 +1356,7 @@ async function generateBookSummary(bookId) {
   btn.textContent = 'Generiere…';
   display.textContent = '';
 
+  if (!window._anthropicKey) { toast('API Key nicht gefunden'); btn.disabled = false; btn.textContent = 'KI-Zusammenfassung generieren'; return; }
   const b = state.books.find(b => b.id === bookId);
   if (!b) { btn.disabled = false; btn.textContent = 'KI-Zusammenfassung generieren'; return; }
 
@@ -1376,7 +1376,7 @@ Erstelle eine strukturierte Zusammenfassung (max. 200 Wörter) der wichtigsten G
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
+        'x-api-key': window._anthropicKey,
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
         'anthropic-dangerous-allow-browser': 'true'
