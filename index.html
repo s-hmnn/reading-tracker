@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -46,6 +45,17 @@
     s.logs   = Array.isArray(s.logs)  ? s.logs  : [];
     s.goals  = s.goals  || {};
     s.nextId = s.nextId || (Math.max(0,...(s.books.length?s.books.map(b=>b.id||0):[0])) + 1);
+    // Migrate done:boolean → status string (idempotent)
+    s.books = s.books.map(b => {
+      if(!b.status){
+        const hasLogs = s.logs.some(l => l.bookId === b.id);
+        b.status = b.done === true ? 'done' : hasLogs ? 'reading' : 'want_to_read';
+        delete b.done;
+      }
+      if(!b.createdAt) b.createdAt = new Date(b.year||2024, 0, 1).toISOString();
+      if(!b.keywords) b.keywords = [];
+      return b;
+    });
     return s;
   }
 
@@ -56,7 +66,7 @@
       if(snap.exists()){
         window._state=sanitizeState(snap.val());
       } else {
-        window._state=window._defaultData();
+        window._state=sanitizeState(window._defaultData());
         await set(ref(db,'tracker'),window._state);
       }
       setStatus('\u2713 Synchronisiert','var(--success)');
@@ -187,6 +197,36 @@
   .empty{text-align:center;padding:1.8rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;}
   .divider{height:1px;background:var(--border);margin:1.2rem 0;}
   .pacing-box{margin-top:0.7rem;padding:0.55rem 0.85rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:4px;font-size:0.8rem;line-height:1.5;}
+  .book-item.reading{background:#eef4f8;border-color:var(--sky-dark);}
+  .book-status-badge{font-family:'DM Mono',monospace;font-size:0.52rem;padding:0.1rem 0.38rem;border-radius:3px;flex-shrink:0;}
+  .book-status-badge.want{background:#f5f0e0;color:#8a7850;border:1px solid #d4ccb8;}
+  .book-status-badge.reading{background:var(--sky-light);color:#3a7090;border:1px solid var(--sky-dark);}
+  /* Book Detail Modal */
+  #book-modal{position:fixed;inset:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
+  @media(min-width:560px){#book-modal{align-items:center;}}
+  #book-modal-panel{background:var(--paper);border-radius:12px 12px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.18);animation:bmSlide 0.22s ease;}
+  @media(min-width:560px){#book-modal-panel{border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.22);}}
+  @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
+  @keyframes bmSlide{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  #book-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:0.7rem;margin-bottom:1rem;}
+  #book-modal-tabs{background:transparent;border-bottom:1px solid var(--border);display:flex;margin-bottom:1rem;}
+  #book-modal-tabs button{font-family:'DM Mono',monospace;font-size:0.67rem;letter-spacing:0.07em;text-transform:uppercase;padding:0.55rem 1rem;border:none;background:transparent;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;}
+  #book-modal-tabs button.active{color:var(--ink);border-bottom-color:var(--accent);}
+  .bm-tab{display:none;} .bm-tab.active{display:block;}
+  .bm-label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;display:block;}
+  .bm-field{margin-bottom:0.9rem;}
+  .bm-input{font-family:'DM Mono',monospace;font-size:0.83rem;padding:0.45rem 0.6rem;border:1px solid var(--border);background:var(--paper);color:var(--ink);border-radius:5px;width:100%;}
+  .bm-input:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
+  .star-widget{display:flex;gap:0;align-items:center;margin-top:0.3rem;}
+  .star-h{display:inline-block;width:14px;height:26px;cursor:pointer;overflow:hidden;position:relative;vertical-align:middle;}
+  .star-h::before{content:'★';position:absolute;top:0;left:0;font-size:1.5rem;line-height:1;color:var(--border);white-space:nowrap;}
+  .star-h.right::before{left:-14px;}
+  .star-h.filled::before{color:var(--gold);}
+  .keyword-tag{display:inline-flex;align-items:center;gap:0.3rem;font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.18rem 0.5rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:20px;color:#3a7090;}
+  .keyword-tag button{background:none;border:none;cursor:pointer;color:inherit;font-size:0.8rem;line-height:1;padding:0;}
+  #bm-keyword-dd{position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--card);border:1px solid var(--border);border-radius:0 0 5px 5px;max-height:160px;overflow-y:auto;}
+  #bm-keyword-dd div{padding:0.42rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;}
+  #bm-keyword-dd div:hover,#bm-keyword-dd div.kw-active{background:var(--sky-light);}
 </style>
 </head>
 <body>
@@ -228,10 +268,12 @@
     <div class="card-title">Eintrag hinzufügen</div>
     <div class="input-row">
       <input type="date" id="log-date" style="max-width:145px">
-      <select id="log-book" style="flex:2"></select>
-      <input type="number" id="log-pages" min="1" max="9999" placeholder="Seiten" style="max-width:85px">
+      <select id="log-book" style="flex:2" onchange="onLogBookChange()"></select>
+      <button id="pos-toggle" class="btn btn-sky btn-sm" onclick="togglePositionMode()" style="flex-shrink:0;min-width:52px" title="Seite / Prozent">Seite</button>
+      <input type="number" id="log-pages" min="0" max="9999" step="1" placeholder="Seite" style="max-width:85px">
       <button class="btn btn-primary" onclick="addEntry()">+ Eintragen</button>
     </div>
+    <div id="log-last-pos" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.35rem;min-height:1em"></div>
   </div>
   <div class="stats-grid">
     <div class="card"><div class="card-title">Heute</div><div class="big-number accent" id="stat-today">0</div><div class="sub">Seiten</div></div>
@@ -242,7 +284,7 @@
   <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
   <div class="card">
     <table class="log-table">
-      <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Seiten</th><th></th></tr></thead>
+      <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Δ Seiten</th><th style="text-align:right">Position</th><th></th></tr></thead>
       <tbody id="log-body"></tbody>
     </table>
     <div class="empty" id="log-empty" style="display:none">Noch keine Einträge</div>
@@ -300,12 +342,15 @@
 
 <!-- BÜCHER -->
 <div id="tab-books" class="tab-content">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.6rem;margin-top:0.4rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.6rem;margin-top:0.4rem">
     <div class="section-title" style="margin:0;border:none">Bücher</div>
-    <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap">
-      <div class="filter-row" id="books-year-filter"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
-    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
+  </div>
+  <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.35rem">
+    <div class="filter-row" id="books-status-filter"></div>
+  </div>
+  <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.85rem">
+    <div class="filter-row" id="books-year-filter"></div>
   </div>
   <div class="card-sky" style="margin-bottom:0.85rem">
     <div class="card-title">Neues Buch</div>
@@ -370,10 +415,67 @@
     <div class="card"><div class="card-title">Top Autoren</div><div id="stat-authors" style="margin-top:0.6rem"></div></div>
   </div>
   <div class="divider"></div>
+  <div class="section-title">Lesestatus</div>
+  <div class="card" style="margin-bottom:1.2rem"><div id="stat-status-breakdown" style="display:flex;gap:1.8rem;flex-wrap:wrap;padding:0.3rem 0"></div></div>
+  <div class="divider"></div>
   <div class="section-title">Kumulativer Fortschritt</div>
-  <div class="card"><div class="chart-wrap" style="height:230px"><canvas id="chart-cumulative"></canvas></div></div>
+  <div class="card" style="margin-bottom:1.2rem"><div class="chart-wrap" style="height:230px"><canvas id="chart-cumulative"></canvas></div></div>
+  <div class="divider"></div>
+  <div class="section-title">Keywords</div>
+  <div class="card"><div id="stat-keywords" style="padding:0.3rem 0"></div></div>
 </div>
 </main>
+</div>
+
+<!-- BOOK DETAIL MODAL -->
+<div id="book-modal" style="display:none" onclick="closeBookModal(event)">
+  <div id="book-modal-panel" onclick="event.stopPropagation()">
+    <div id="book-modal-header">
+      <div>
+        <div id="bm-title" style="font-family:'Playfair Display',serif;font-size:1.05rem;line-height:1.2;margin-bottom:0.25rem"></div>
+        <div id="bm-meta" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="closeBookModal()" style="flex-shrink:0">✕</button>
+    </div>
+    <div id="book-modal-tabs">
+      <button class="active" onclick="switchBookModalTab('details',this)">Details</button>
+      <button onclick="switchBookModalTab('verlauf',this)">Verlauf</button>
+    </div>
+    <div id="bmt-details" class="bm-tab active">
+      <div class="bm-field">
+        <label class="bm-label">Quelle / Empfehlung</label>
+        <input type="text" id="bm-source" class="bm-input" placeholder="z.B. Empfehlung, Zeitungsartikel…">
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">Bewertung</label>
+        <div id="bm-stars" class="star-widget"></div>
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">Notizen</label>
+        <textarea id="bm-notes" class="bm-input" rows="4" placeholder="Gedanken, Zitate, Zusammenfassung…" style="resize:vertical;min-height:80px"></textarea>
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">Keywords</label>
+        <div id="bm-keyword-tags" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.4rem;min-height:1rem"></div>
+        <div style="position:relative">
+          <input type="text" id="bm-keyword-input" class="bm-input" placeholder="Keyword eingeben + Enter" autocomplete="off" oninput="onKeywordInput()" onkeydown="onKeywordKeydown(event)">
+          <div id="bm-keyword-dd" style="display:none"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+        <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+      </div>
+    </div>
+    <div id="bmt-verlauf" class="bm-tab">
+      <div class="chart-wrap" style="height:175px;margin-bottom:1rem"><canvas id="bm-chart"></canvas></div>
+      <table class="log-table" id="bm-log-table">
+        <thead><tr><th>Datum</th><th style="text-align:right">Δ Seiten</th><th style="text-align:right">Position</th></tr></thead>
+        <tbody id="bm-log-body"></tbody>
+      </table>
+      <div class="empty" id="bm-log-empty" style="display:none">Noch keine Leseeinträge</div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -464,7 +566,7 @@ function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Mat
 function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
 function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
 function pagesThisYear(yr){
-  const b=state.books.filter(b=>b.year===yr&&b.done).reduce((s,b)=>s+(b.pages||0),0);
+  const b=state.books.filter(b=>b.year===yr&&b.status==='done').reduce((s,b)=>s+(b.pages||0),0);
   const l=state.logs.filter(l=>l.date.startsWith(String(yr))).reduce((s,l)=>s+l.pages,0);
   return b+l;
 }
@@ -482,21 +584,78 @@ function switchTab(tab,btn){
   btn.classList.add('active');refreshAll();
 }
 
+let positionMode='page'; // 'page' | 'percent'
+
+function getLastPosition(bookId){
+  const bl=state.logs.filter(l=>l.bookId===bookId).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  if(!bl.length)return null;
+  const last=bl[bl.length-1];
+  if(last.currentPosition!=null)return{position:last.currentPosition,type:last.positionType||'page'};
+  const cum=bl.reduce((s,l)=>s+(l.pages||0),0);
+  return{position:cum,type:'page'};
+}
+
+function togglePositionMode(){
+  positionMode=(positionMode==='page')?'percent':'page';
+  const btn=document.getElementById('pos-toggle');
+  const inp=document.getElementById('log-pages');
+  if(btn)btn.textContent=positionMode==='page'?'Seite':'%';
+  if(inp){inp.placeholder=positionMode==='page'?'Seite':'Prozent';inp.max=positionMode==='page'?'9999':'100';inp.step=positionMode==='page'?'1':'0.1';}
+  updateLastPosHint();
+}
+
+function onLogBookChange(){updateLastPosHint();}
+
+function updateLastPosHint(){
+  const sel=document.getElementById('log-book');
+  const hint=document.getElementById('log-last-pos');
+  if(!hint)return;
+  const bookId=sel?parseInt(sel.value):NaN;
+  if(!bookId||isNaN(bookId)){hint.textContent='';return;}
+  const last=getLastPosition(bookId);
+  if(!last){hint.textContent='Erster Eintrag – aktuelle Position wird direkt als gelesen gewertet';return;}
+  const book=state.books.find(b=>b.id===bookId);
+  if(last.type==='percent'){hint.textContent=`Zuletzt: ${last.position}%`;}
+  else{const total=book&&book.pages?` / ${book.pages} S.`:'';hint.textContent=`Zuletzt: Seite ${last.position}${total}`;}
+}
+
 function populateBookSelect(){
   const sel=document.getElementById('log-book');
-  const books=state.books.filter(b=>!b.done).sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
+  const books=state.books.filter(b=>b.status!=='done').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
   if(!books.length){sel.innerHTML='<option value="">– Kein aktives Buch –</option>';return;}
-  sel.innerHTML=books.map(b=>`<option value="${b.id}">${cap(b.title)}</option>`).join('');
+  sel.innerHTML=books.map(b=>`<option value="${b.id}">${cap(b.title)}${b.status==='want_to_read'?' ★':''}</option>`).join('');
+  updateLastPosHint();
 }
 
 function addEntry(){
   const date=document.getElementById('log-date').value;
   const bookId=parseInt(document.getElementById('log-book').value);
-  const pages=parseInt(document.getElementById('log-pages').value);
-  if(!date||!pages||pages<1){toast('Datum und Seiten angeben!');return;}
+  const inputVal=parseFloat(document.getElementById('log-pages').value);
+  if(!date||isNaN(inputVal)||inputVal<0){toast('Datum und Position angeben!');return;}
   const book=state.books.find(b=>b.id===bookId);
-  state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages});
-  save();document.getElementById('log-pages').value='';toast(`+${pages} Seiten ✓`);refreshAll();
+  const last=getLastPosition(bookId);
+  let deltaPages,currentPosition,positionType;
+  if(positionMode==='percent'){
+    positionType='percent';
+    currentPosition=Math.min(100,Math.max(0,Math.round(inputVal*10)/10));
+    const lastPct=(last&&last.type==='percent')?last.position:(last&&book&&book.pages)?(last.position/book.pages*100):0;
+    const deltaPct=currentPosition-lastPct;
+    if(deltaPct<=0){toast('Position muss größer als zuletzt sein!');return;}
+    deltaPages=book&&book.pages?Math.max(1,Math.round(deltaPct*book.pages/100)):Math.round(deltaPct);
+  } else {
+    positionType='page';
+    currentPosition=Math.round(inputVal);
+    const lastPage=(last&&last.type==='page')?last.position:(last&&last.type==='percent'&&book&&book.pages)?Math.round(last.position*book.pages/100):0;
+    deltaPages=currentPosition-lastPage;
+    if(deltaPages<=0){toast('Position muss größer als zuletzt sein!');return;}
+  }
+  if(book&&book.status==='want_to_read'){book.status='reading';}
+  state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages:deltaPages,currentPosition,positionType});
+  save();
+  document.getElementById('log-pages').value='';
+  updateLastPosHint();
+  toast(`+${deltaPages} Seiten ✓`);
+  refreshAll();
 }
 
 function deleteEntry(id){state.logs=state.logs.filter(l=>l.id!==id);save();renderLog();renderTodayStats();}
@@ -506,12 +665,15 @@ function renderLog(){
   const logs=[...state.logs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
   if(!logs.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  tbody.innerHTML=logs.map(l=>`<tr>
+  tbody.innerHTML=logs.map(l=>{
+    const posCell=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':' S.'}`:'\u2014';
+    return`<tr>
     <td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td>
-    <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cap(l.bookTitle)}</td>
+    <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cap(l.bookTitle)}</td>
     <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td>
+    <td style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
     <td><button class="delete-btn" onclick="deleteEntry(${l.id})">×</button></td>
-  </tr>`).join('');
+  </tr>`;}).join('');
   document.getElementById('log-year-label').textContent=`(${logs.length})`;
 }
 
@@ -576,9 +738,10 @@ function renderGoal(){
   }).join('');
 }
 
-let booksYF=new Set();
+let booksYF=new Set(),booksStatusF='all';
 function toggleBooksYear(y){if(y==='all')booksYF.clear();else booksYF.has(y)?booksYF.delete(y):booksYF.add(y);renderBooks();}
-function toggleBook(id){const b=state.books.find(b=>b.id===id);if(b){b.done=!b.done;save();renderBooks();populateBookSelect();}}
+function toggleBooksStatus(s){booksStatusF=s;renderBooks();}
+function toggleBookDone(id){const b=state.books.find(b=>b.id===id);if(!b)return;const hasLogs=state.logs.some(l=>l.bookId===id);b.status=(b.status==='done')?(hasLogs?'reading':'want_to_read'):'done';save();renderBooks();populateBookSelect();}
 function toggleEditBook(id,e){e.stopPropagation();document.querySelector(`.book-item[data-id="${id}"]`)?.classList.toggle('editing');}
 function saveBookEdit(id){
   const b=state.books.find(b=>b.id===id);if(!b)return;
@@ -600,7 +763,7 @@ function addBook(){
   const pages=parseInt(document.getElementById('new-book-pages').value)||0;
   const year=parseInt(document.getElementById('new-book-year').value);
   if(!title){toast('Titel eingeben');return;}
-  state.books.push({id:state.nextId++,title:title.toLowerCase(),author,type,pages,year,done:false});
+  state.books.push({id:state.nextId++,title:title.toLowerCase(),author,type,pages,year,status:'want_to_read',createdAt:new Date().toISOString(),keywords:[]});
   save();['new-book-title','new-book-author','new-book-pages'].forEach(id=>document.getElementById(id).value='');
   toast('Buch hinzugefügt ✓');renderBooks();populateBookSelect();
 }
@@ -610,17 +773,23 @@ function renderBooks(){
   if(fc){const all=booksYF.size===0;
     fc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleBooksYear('all')">Alle</button>`
       +years.map(y=>`<button class="year-tab ${booksYF.has(y)?'active':''}" onclick="toggleBooksYear(${y})">${y}</button>`).join('');}
+  const sf=document.getElementById('books-status-filter');
+  if(sf){const statuses=[{v:'all',l:'Alle'},{v:'want_to_read',l:'Merkliste'},{v:'reading',l:'Lese ich'},{v:'done',l:'Gelesen'}];
+    sf.innerHTML=statuses.map(s=>`<button class="year-tab ${booksStatusF===s.v?'active':''}" onclick="toggleBooksStatus('${s.v}')">${s.l}</button>`).join('');}
   let books=state.books.filter(b=>booksYF.size===0||booksYF.has(b.year));
+  if(booksStatusF!=='all')books=books.filter(b=>b.status===booksStatusF);
   books=[...books].sort((a,b)=>a.year-b.year||a.title.localeCompare(b.title));
   document.getElementById('books-count').textContent=books.length;
-  document.getElementById('books-done').textContent=books.filter(b=>b.done).length;
+  document.getElementById('books-done').textContent=state.books.filter(b=>b.status==='done').length;
   const list=document.getElementById('book-list');
   if(!books.length){list.innerHTML='<div class="empty">Keine Bücher</div>';return;}
+  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
   list.innerHTML=books.map(b=>`
-    <div class="book-item ${b.done?'done':''}" data-id="${b.id}">
-      <div class="book-item-row" onclick="toggleBook(${b.id})">
-        <div class="book-check">${b.done?'✓':''}</div>
+    <div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':''}" data-id="${b.id}">
+      <div class="book-item-row" onclick="openBookModal(${b.id})">
+        <div class="book-check" onclick="event.stopPropagation();toggleBookDone(${b.id})">${b.status==='done'?'✓':''}</div>
         <div style="flex:1;min-width:0"><div class="book-title">${cap(b.title)}</div>${b.author?`<div class="book-meta">${b.author}</div>`:''}</div>
+        ${sBadge(b.status)}
         ${b.type?`<div class="book-type-badge">${b.type}</div>`:''}
         ${b.pages?`<div class="book-pages">${b.pages}S.</div>`:''}
         <div class="book-year-badge">${b.year}</div>
@@ -657,7 +826,7 @@ function renderYearCharts(){
     mc.innerHTML=years.map(y=>{const a=none?y===CURRENT_YEAR:selMY.has(y);
       return`<button class="year-tab ${a?'active':''}" onclick="toggleMY(${y})">${y}</button>`;}).join('');}
   const dY=selCY.size===0?years:years.filter(y=>selCY.has(y));
-  const pages=dY.map(y=>pagesThisYear(y)),books=dY.map(y=>state.books.filter(b=>b.year===y&&b.done).length);
+  const pages=dY.map(y=>pagesThisYear(y)),books=dY.map(y=>state.books.filter(b=>b.year===y&&b.status==='done').length);
   const bc=dY.map(y=>pal[years.indexOf(y)%pal.length]);
   document.getElementById('year-compare-cards').innerHTML=dY.map((y,i)=>{
     const prev=i>0?pages[i-1]:null,diff=prev?Math.round((pages[i]-prev)/prev*100):null;
@@ -710,6 +879,10 @@ function renderStats(){
   document.getElementById('stat-avg-len').textContent=total?Math.round(tp/total):'—';
   const best=years.reduce((b,y)=>pagesThisYear(y)>pagesThisYear(b)?y:b,years[0]);
   document.getElementById('stat-best-year').textContent=best;
+  const allBks=state.books.filter(b=>selSY.size===0||selSY.has(b.year));
+  const sCounts={want_to_read:allBks.filter(b=>b.status==='want_to_read').length,reading:allBks.filter(b=>b.status==='reading').length,done:allBks.filter(b=>b.status==='done').length};
+  const sbd=document.getElementById('stat-status-breakdown');
+  if(sbd)sbd.innerHTML=`<div><div class="big-number" style="font-size:1.4rem">${sCounts.want_to_read}</div><div class="sub">Merkliste</div></div><div><div class="big-number sky" style="font-size:1.4rem">${sCounts.reading}</div><div class="sub">Lese ich</div></div><div><div class="big-number accent" style="font-size:1.4rem">${sCounts.done}</div><div class="sub">Gelesen</div></div>`;
   document.getElementById('stat-top5').innerHTML=sorted.slice(0,5).length
     ?sorted.slice(0,5).map((b,i)=>`<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid var(--cream);font-size:0.78rem">
         <div><span style="font-family:'DM Mono',monospace;color:var(--muted);margin-right:0.35rem">${i+1}</span>${cap(b.title)}${b.author?`<span style="color:var(--muted);font-size:0.68rem;margin-left:0.3rem">· ${b.author}</span>`:''}</div>
@@ -740,7 +913,7 @@ function renderStats(){
           <span style="font-family:'DM Mono',monospace;color:var(--muted)">${e[1]} ${e[1]===1?'Buch':'Bücher'}</span></div>
         <div class="progress-track"><div class="progress-fill sky" style="width:${Math.round(e[1]/ae[0][1]*100)}%"></div></div></div>`).join('')
     :'<div class="empty" style="padding:0.7rem">Keine Autoren-Daten</div>';
-  const cd=years.map(y=>{const by=state.books.filter(b=>b.year===y&&b.done).sort((a,b)=>a.id-b.id);
+  const cd=years.map(y=>{const by=state.books.filter(b=>b.year===y&&b.status==='done').sort((a,b)=>a.id-b.id);
     let cum=0;return[0,...by.map(b=>{cum+=b.pages;return cum;})];});
   const ml=Math.max(...cd.map(d=>d.length));
   const lb=Array.from({length:ml},(_,i)=>i===0?'Start':`B${i}`);
@@ -751,7 +924,167 @@ function renderStats(){
       backgroundColor:'transparent',tension:0.2,pointRadius:1.5,borderWidth:y===CURRENT_YEAR?2.5:1.5}))},
     options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
       scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
+  // Keyword cloud
+  const kf={};state.books.filter(b=>selSY.size===0||selSY.has(b.year)).forEach(b=>(b.keywords||[]).forEach(k=>{kf[k]=(kf[k]||0)+1;}));
+  const ke=Object.entries(kf).sort((a,b)=>b[1]-a[1]);
+  const kwEl=document.getElementById('stat-keywords');
+  if(kwEl){
+    if(!ke.length){kwEl.innerHTML='<div class="empty" style="padding:0.7rem">Noch keine Keywords vergeben</div>';}
+    else{const mx=ke[0][1];
+      kwEl.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:0.4rem;align-items:baseline;padding:0.3rem 0">'+
+        ke.map(([k,n])=>{const sz=(0.62+(n/mx)*0.6).toFixed(2);const op=(0.5+(n/mx)*0.5).toFixed(2);
+          return`<span style="font-family:'DM Mono',monospace;font-size:${sz}rem;opacity:${op};cursor:default;padding:0.1rem 0.2rem" title="${n} ${n===1?'Buch':'Bücher'}">${k}</span>`;
+        }).join('')+'</div>';
+    }
+  }
 }
+
+// ── Book Detail Modal ────────────────────────────────────
+let _bmBookId=null,_bmRating=0,_bmKeywords=[],_kDropIdx=-1;
+
+function getAllKeywords(){
+  const kw=new Set();
+  state.books.forEach(b=>(b.keywords||[]).forEach(k=>kw.add(k)));
+  return[...kw].sort();
+}
+
+function renderStarWidget(rating){
+  _bmRating=rating||0;
+  const wrap=document.getElementById('bm-stars');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  for(let star=1;star<=5;star++){
+    const left=document.createElement('span');
+    left.className='star-h left'+(_bmRating>=star-0.5?' filled':'');
+    left.onclick=()=>setRating(star-0.5);
+    const right=document.createElement('span');
+    right.className='star-h right'+(_bmRating>=star?' filled':'');
+    right.onclick=()=>setRating(star);
+    wrap.appendChild(left);wrap.appendChild(right);
+  }
+  const lbl=document.createElement('span');
+  lbl.style.cssText='font-family:"DM Mono",monospace;font-size:0.72rem;color:var(--muted);margin-left:0.5rem;';
+  lbl.textContent=_bmRating>0?_bmRating+' / 5':'';
+  wrap.appendChild(lbl);
+}
+
+function setRating(val){_bmRating=(_bmRating===val)?0:val;renderStarWidget(_bmRating);}
+
+function renderKeywordTags(){
+  const wrap=document.getElementById('bm-keyword-tags');
+  if(!wrap)return;
+  wrap.innerHTML=_bmKeywords.map((k,i)=>`<span class="keyword-tag">${k}<button onclick="_bmKeywords.splice(${i},1);renderKeywordTags()" title="Entfernen">×</button></span>`).join('');
+}
+
+function onKeywordInput(){
+  const val=document.getElementById('bm-keyword-input').value.trim().toLowerCase();
+  const dd=document.getElementById('bm-keyword-dd');
+  _kDropIdx=-1;
+  if(!val){dd.style.display='none';return;}
+  const all=getAllKeywords().filter(k=>k.toLowerCase().includes(val)&&!_bmKeywords.includes(k));
+  if(!all.length){dd.style.display='none';return;}
+  dd.innerHTML=all.slice(0,8).map(k=>`<div onclick="selectKeyword(this.dataset.k)" data-k="${k.replace(/"/g,'&quot;')}">${k}</div>`).join('');
+  dd.style.display='block';
+}
+
+function onKeywordKeydown(e){
+  const dd=document.getElementById('bm-keyword-dd');
+  const items=dd.querySelectorAll('div');
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(_kDropIdx>=0&&items[_kDropIdx]){items[_kDropIdx].click();}
+    else{const val=document.getElementById('bm-keyword-input').value.trim();
+      if(val&&!_bmKeywords.includes(val))_bmKeywords.push(val);
+      document.getElementById('bm-keyword-input').value='';dd.style.display='none';renderKeywordTags();}
+  } else if(e.key==='ArrowDown'){
+    e.preventDefault();_kDropIdx=Math.min(_kDropIdx+1,items.length-1);
+    items.forEach((el,i)=>el.classList.toggle('kw-active',i===_kDropIdx));
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();_kDropIdx=Math.max(_kDropIdx-1,-1);
+    items.forEach((el,i)=>el.classList.toggle('kw-active',i===_kDropIdx));
+  } else if(e.key==='Escape'){dd.style.display='none';_kDropIdx=-1;}
+}
+
+function selectKeyword(k){
+  if(!_bmKeywords.includes(k))_bmKeywords.push(k);
+  document.getElementById('bm-keyword-input').value='';
+  document.getElementById('bm-keyword-dd').style.display='none';
+  renderKeywordTags();
+}
+
+function openBookModal(id){
+  const b=state.books.find(b=>b.id===id);
+  if(!b)return;
+  _bmBookId=id;
+  _bmKeywords=[...(b.keywords||[])];
+  document.getElementById('bm-title').textContent=cap(b.title);
+  document.getElementById('bm-meta').textContent=[b.author,b.type,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
+  document.getElementById('bm-source').value=b.source||'';
+  document.getElementById('bm-notes').value=b.notes||'';
+  renderStarWidget(b.rating||0);
+  renderKeywordTags();
+  document.getElementById('bm-keyword-input').value='';
+  document.getElementById('bm-keyword-dd').style.display='none';
+  // show details tab
+  document.querySelectorAll('.bm-tab').forEach(el=>{el.style.display='none';el.classList.remove('active');});
+  document.querySelectorAll('#book-modal-tabs button').forEach(el=>el.classList.remove('active'));
+  document.getElementById('bmt-details').style.display='block';
+  document.getElementById('bmt-details').classList.add('active');
+  document.querySelector('#book-modal-tabs button').classList.add('active');
+  document.getElementById('book-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function closeBookModal(event){
+  if(event&&event.target!==document.getElementById('book-modal'))return;
+  document.getElementById('book-modal').style.display='none';
+  document.body.style.overflow='';
+  _bmBookId=null;
+}
+
+function switchBookModalTab(tab,btn){
+  document.querySelectorAll('.bm-tab').forEach(el=>{el.style.display='none';el.classList.remove('active');});
+  document.querySelectorAll('#book-modal-tabs button').forEach(el=>el.classList.remove('active'));
+  const t=document.getElementById('bmt-'+tab);
+  if(t){t.style.display='block';t.classList.add('active');}
+  btn.classList.add('active');
+  if(tab==='verlauf')renderBookVerlauf(_bmBookId);
+}
+
+function saveBookDetails(){
+  if(_bmBookId==null)return;
+  const b=state.books.find(b=>b.id===_bmBookId);
+  if(!b)return;
+  b.source=document.getElementById('bm-source').value.trim();
+  b.notes=document.getElementById('bm-notes').value.trim();
+  b.rating=_bmRating;
+  b.keywords=[..._bmKeywords];
+  save();toast('Gespeichert ✓');
+  document.getElementById('book-modal').style.display='none';
+  document.body.style.overflow='';
+  _bmBookId=null;
+  renderBooks();
+}
+
+function renderBookVerlauf(bookId){
+  const bl=state.logs.filter(l=>l.bookId===bookId).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  const tbody=document.getElementById('bm-log-body');
+  const empty=document.getElementById('bm-log-empty');
+  if(!bl.length){if(tbody)tbody.innerHTML='';if(empty)empty.style.display='block';destroyChart('bm-chart');return;}
+  if(empty)empty.style.display='none';
+  let cum=0;const labels=[],data=[];
+  bl.forEach(l=>{cum+=l.pages;labels.push(l.date.slice(5));data.push(cum);});
+  destroyChart('bm-chart');
+  const cvs=document.getElementById('bm-chart');
+  if(cvs)charts['bm-chart']=new Chart(cvs.getContext('2d'),{type:'line',
+    data:{labels,datasets:[{data,borderColor:'#a8c4d8',backgroundColor:'rgba(168,196,216,0.12)',fill:true,tension:0.3,pointRadius:3,borderWidth:2}]},
+    options:{...CD,plugins:{legend:{display:false}},scales:{...CD.scales,x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxTicksLimit:8}},y:{...CD.scales.y,beginAtZero:true}}}});
+  if(tbody)tbody.innerHTML=bl.map(l=>{
+    const pos=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':' S.'}`:'\u2014';
+    return`<tr><td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td><td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted)">${pos}</td></tr>`;
+  }).join('');
+}
+// ── End Book Detail Modal ────────────────────────────────
 
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();};
 
@@ -764,7 +1097,7 @@ window.initApp=function(){
   const ny=document.getElementById('new-book-year');
   if(ny)ny.innerHTML=allYears().map(y=>`<option value="${y}"${y===CURRENT_YEAR?' selected':''}>${y}</option>`).join('');
   document.getElementById('log-date').value=todayStr();
-  populateBookSelect();refreshAll();
+  populateBookSelect();updateLastPosHint();refreshAll();
 };
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
