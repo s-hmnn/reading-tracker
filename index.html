@@ -62,7 +62,7 @@
         b.status = b.done === true ? 'done' : hasLogs ? 'reading' : 'want_to_read';
         delete b.done;
       }
-      if(!b.createdAt) b.createdAt = new Date(b.year||2024, 0, 1).toISOString();
+      if(!b.createdAt) b.createdAt = new Date(b.year||new Date().getFullYear(), 0, 1).toISOString();
       if(!b.keywords) b.keywords = [];
       return b;
     });
@@ -584,7 +584,11 @@ window._defaultData=function(){return{books:[],logs:[],goals:{},nextId:1};};
 Object.defineProperty(window,'state',{get(){return window._state;},set(v){window._state=v;}});
 function save(){window.saveToFirebase();}
 
-function allYears(){const y=[];for(let i=2024;i<=CURRENT_YEAR;i++)y.push(i);return y;}
+function allYears(){
+  const ys=[...state.books.map(b=>b.year),...state.logs.map(l=>+l.date.slice(0,4))].filter(Boolean);
+  const min=ys.length?Math.min(...ys):CURRENT_YEAR;
+  const y=[];for(let i=min;i<=CURRENT_YEAR;i++)y.push(i);return y;
+}
 function todayStr(){return new Date().toISOString().slice(0,10);}
 function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/86400000);}
 function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
