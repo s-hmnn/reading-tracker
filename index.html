@@ -701,7 +701,43 @@
           <button class="btn btn-primary btn-sm" onclick="addQuote()">+ Hinzufügen</button>
         </div>
       </div>
+      <div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.8rem">
+        <button class="btn btn-outline btn-sm" style="width:100%" onclick="openKindleImport()">Kindle Highlights importieren</button>
+      </div>
     </div>
+    </div>
+  </div>
+</div>
+
+<!-- KINDLE IMPORT MODAL -->
+<div id="kindle-modal" style="display:none;position:fixed;inset:0;background:rgba(26,18,8,0.55);z-index:200;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease" onclick="closeKindleImport(event)">
+  <div id="kindle-modal-panel" onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-family:'Inter',sans-serif;font-weight:600;font-size:1rem">Kindle Highlights importieren</div>
+      <button class="btn btn-outline btn-sm" onclick="closeKindleImport()">✕</button>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin:0 0 0.9rem;line-height:1.5">
+      Öffne <strong>read.amazon.com/notebook</strong>, wähle dein Buch und klicke auf „Exportieren".<br>
+      Lade die HTML-Datei hoch oder füge den kopierten Text ein.
+    </p>
+    <div style="margin-bottom:0.7rem">
+      <label class="bm-label">HTML-Datei hochladen</label>
+      <input type="file" id="kindle-file-input" accept=".html,.htm,.txt" style="font-size:0.8rem;color:var(--ink);width:100%;padding:0.3rem 0" onchange="onKindleFileSelected(event)">
+    </div>
+    <div style="margin-bottom:0.9rem">
+      <label class="bm-label">Oder Text einfügen</label>
+      <textarea id="kindle-paste-text" rows="7" style="width:100%;font-size:0.8rem;padding:0.5rem 0.65rem;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:8px;resize:vertical;box-sizing:border-box;font-family:'DM Mono',monospace" placeholder="Highlight-Text hier einfügen…"></textarea>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.9rem">
+      <button class="btn btn-outline btn-sm" onclick="analyzeKindleInput()">Analysieren</button>
+    </div>
+    <div id="kindle-preview" style="display:none">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem" id="kindle-preview-title"></div>
+      <div id="kindle-preview-list" style="max-height:200px;overflow-y:auto;margin-bottom:0.9rem"></div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+        <button class="btn btn-outline btn-sm" onclick="closeKindleImport()">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="importKindleHighlights()">Importieren</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1412,6 +1448,152 @@ function addQuote(){
   renderQuotesList();
 }
 function deleteQuote(idx){_bmQuotes.splice(idx,1);renderQuotesList();}
+
+// ── Kindle Import ────────────────────────────────────────
+let _kindleParsed = [];
+
+function openKindleImport() {
+  const modal = document.getElementById('kindle-modal');
+  modal.style.display = 'flex';
+  document.getElementById('kindle-preview').style.display = 'none';
+  document.getElementById('kindle-paste-text').value = '';
+  document.getElementById('kindle-file-input').value = '';
+  _kindleParsed = [];
+}
+
+function closeKindleImport(e) {
+  if (e && e.target !== document.getElementById('kindle-modal')) return;
+  document.getElementById('kindle-modal').style.display = 'none';
+}
+
+function onKindleFileSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('kindle-paste-text').value = ev.target.result;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseKindleHighlights(raw) {
+  // HTML erkennen und in Plain Text umwandeln
+  let text = raw.trim();
+  if (text.startsWith('<')) {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    // Kindle HTML-Export: Highlights stehen in <span class="highlight"> oder als Textblöcke
+    // Zuerst versuchen wir strukturiertes Parsing der Kindle-HTML-Klassen
+    const structured = parseKindleHtml(doc);
+    if (structured.length) return structured;
+    // Fallback: innerText
+    text = doc.body.innerText;
+  }
+  return parseKindlePlainText(text);
+}
+
+function parseKindleHtml(doc) {
+  const results = [];
+  // Kindle HTML-Export nutzt typischerweise .noteText oder #highlight für Highlight-Texte
+  // und .sectionHeading / .noteHeading für Metadaten
+  const headings = doc.querySelectorAll('.noteHeading, [class*="heading"], [class*="Heading"]');
+  const noteTexts = doc.querySelectorAll('.noteText, [class*="noteText"], [class*="highlight"]');
+
+  if (noteTexts.length === 0) return [];
+
+  noteTexts.forEach((el, i) => {
+    const txt = el.textContent.trim();
+    if (!txt || txt.length < 5) return;
+    let page = null;
+    // Seitenzahl aus dem zugehörigen Heading extrahieren
+    if (headings[i]) {
+      const headTxt = headings[i].textContent;
+      const m = headTxt.match(/[Ss]eite\s+(\d+)|[Pp]age\s+(\d+)|[Pp]g\.?\s+(\d+)/);
+      if (m) page = parseInt(m[1] || m[2] || m[3]);
+    }
+    results.push(page ? {text: txt, page} : {text: txt});
+  });
+  return results;
+}
+
+function parseKindlePlainText(text) {
+  const results = [];
+  // Trennzeichen: ---------- oder ========== oder leere Zeilen nach Metadaten-Zeile
+  const lines = text.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    // Metadaten-Zeile erkennen: enthält "Page", "Seite", "Location", "Markierung", "Highlight"
+    const isMeta = /([Hh]ighlight|[Mm]arkierung|[Nn]ote|[Aa]nnotation).*([Pp]age|[Ss]eite|[Ll]ocation|[Pp]osition)\s*(\d+)|([Pp]age|[Ss]eite)\s+(\d+)/i.test(line);
+    if (isMeta) {
+      const pageMatch = line.match(/[Pp]age\s+(\d+)|[Ss]eite\s+(\d+)|[Pp]g\.?\s*(\d+)/i);
+      const page = pageMatch ? parseInt(pageMatch[1] || pageMatch[2] || pageMatch[3]) : null;
+      // Nächste nicht-leere Zeile ist der Highlight-Text
+      i++;
+      while (i < lines.length && lines[i].trim() === '') i++;
+      // Text sammeln bis Trennzeichen oder nächste Metadaten-Zeile
+      const textLines = [];
+      while (i < lines.length) {
+        const l = lines[i].trim();
+        if (/^[-=]{5,}$/.test(l)) { i++; break; }
+        if (/([Hh]ighlight|[Mm]arkierung|[Nn]ote|[Aa]nnotation).*([Pp]age|[Ss]eite|[Ll]ocation)/i.test(l)) break;
+        if (l) textLines.push(l);
+        i++;
+      }
+      const txt = textLines.join(' ').trim();
+      if (txt && txt.length >= 5) {
+        results.push(page ? {text: txt, page} : {text: txt});
+      }
+    } else {
+      i++;
+    }
+  }
+  return results;
+}
+
+function analyzeKindleInput() {
+  const raw = document.getElementById('kindle-paste-text').value.trim();
+  if (!raw) { toast('Bitte Text einfügen oder Datei hochladen.'); return; }
+  _kindleParsed = parseKindleHighlights(raw);
+  if (!_kindleParsed.length) {
+    toast('Keine Highlights erkannt. Bitte Format prüfen.');
+    return;
+  }
+  // Vorschau anzeigen
+  const previewDiv = document.getElementById('kindle-preview');
+  const titleEl = document.getElementById('kindle-preview-title');
+  const listEl = document.getElementById('kindle-preview-list');
+  titleEl.textContent = `${_kindleParsed.length} Highlight${_kindleParsed.length !== 1 ? 's' : ''} erkannt`;
+  listEl.innerHTML = _kindleParsed.map((q, i) => `
+    <div style="border-radius:8px;padding:0.5rem 0.65rem;margin-bottom:0.4rem;background:var(--sky-light);font-size:0.8rem;line-height:1.4">
+      <div style="font-style:italic;color:var(--ink)">${q.text.length > 120 ? q.text.slice(0, 120) + '…' : q.text}</div>
+      ${q.page ? `<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:0.2rem">S. ${q.page}</div>` : ''}
+    </div>`).join('');
+  previewDiv.style.display = 'block';
+}
+
+function importKindleHighlights() {
+  if (!_kindleParsed.length) return;
+  let added = 0;
+  const total = _kindleParsed.length;
+  for (const q of _kindleParsed) {
+    // Duplikat-Prüfung: identischer Text bereits vorhanden?
+    const exists = _bmQuotes.some(existing => existing.text.trim() === q.text.trim());
+    if (!exists) {
+      _bmQuotes.push(q);
+      added++;
+    }
+  }
+  renderQuotesList();
+  document.getElementById('kindle-modal').style.display = 'none';
+  _kindleParsed = [];
+  const skipped = total - added;
+  const msg = added > 0
+    ? `${added} Highlight${added !== 1 ? 's' : ''} importiert ✓${skipped > 0 ? ` (${skipped} übersprungen)` : ''}`
+    : 'Alle Highlights bereits vorhanden.';
+  toast(msg);
+}
+// ── End Kindle Import ────────────────────────────────────
+
 // ── End Book Detail Modal ────────────────────────────────
 
 // ── KI-Zusammenfassung ───────────────────────────────────
