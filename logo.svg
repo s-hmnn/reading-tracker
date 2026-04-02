@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background with rounded corners (app icon shape) -->
+  <rect width="512" height="512" rx="72" fill="#C9DDEB"/>
+
+  <!-- ── BOOK ── open book viewed from slight angle, bottom center -->
+  <!-- Left page -->
+  <path d="M256,365 L110,348 L110,445 L256,448 Z" fill="#F8F4EF"/>
+  <path d="M256,365 L110,348 L110,445 L256,448 Z" fill="none" stroke="#D4C9B8" stroke-width="2"/>
+  <!-- Right page -->
+  <path d="M256,365 L402,348 L402,445 L256,448 Z" fill="#F0EBE3"/>
+  <path d="M256,365 L402,348 L402,445 L256,448 Z" fill="none" stroke="#D4C9B8" stroke-width="2"/>
+  <!-- Book cover left edge -->
+  <path d="M110,348 L110,445" stroke="#2D5B8A" stroke-width="5" stroke-linecap="round"/>
+  <!-- Book cover right edge -->
+  <path d="M402,348 L402,445" stroke="#2D5B8A" stroke-width="5" stroke-linecap="round"/>
+  <!-- Top edges (book cover) -->
+  <path d="M110,348 L256,365" stroke="#2D5B8A" stroke-width="3" stroke-linecap="round"/>
+  <path d="M402,348 L256,365" stroke="#2D5B8A" stroke-width="3" stroke-linecap="round"/>
+  <!-- Page lines left -->
+  <line x1="138" y1="370" x2="243" y2="382" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="387" x2="243" y2="397" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="404" x2="243" y2="411" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="420" x2="243" y2="425" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Page lines right -->
+  <line x1="269" y1="382" x2="374" y2="370" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="397" x2="374" y2="387" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="411" x2="374" y2="404" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="425" x2="374" y2="420" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Book spine (center fold) -->
+  <rect x="249" y="360" width="14" height="90" rx="5" fill="#2D5B8A"/>
+
+  <!-- ── TRUNK ── grows from spine -->
+  <!-- Main trunk -->
+  <path d="M256,365 C254,330 252,295 256,240" stroke="#7C5C3A" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <!-- Left branch -->
+  <path d="M253,300 C230,285 205,270 185,250" stroke="#7C5C3A" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- Right branch -->
+  <path d="M258,285 C280,268 308,255 330,238" stroke="#7C5C3A" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- Small left twig -->
+  <path d="M220,267 C208,254 200,242 198,228" stroke="#7C5C3A" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- Small right twig -->
+  <path d="M300,255 C312,243 318,230 316,215" stroke="#7C5C3A" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+  <!-- ── FOLIAGE ── overlapping circles, darkest at back -->
+  <!-- Back/outer layer (darkest) -->
+  <circle cx="195" cy="215" r="62" fill="#1A7A43"/>
+  <circle cx="317" cy="205" r="62" fill="#1A7A43"/>
+  <circle cx="256" cy="175" r="70" fill="#1A7A43"/>
+  <!-- Middle layer -->
+  <circle cx="210" cy="200" r="55" fill="#27AE60"/>
+  <circle cx="302" cy="192" r="55" fill="#27AE60"/>
+  <circle cx="256" cy="162" r="65" fill="#27AE60"/>
+  <!-- Front/brightest layer -->
+  <circle cx="226" cy="190" r="48" fill="#2ECC71"/>
+  <circle cx="286" cy="183" r="48" fill="#2ECC71"/>
+  <circle cx="256" cy="148" r="56" fill="#2ECC71"/>
+  <!-- Highlight top -->
+  <circle cx="256" cy="138" r="38" fill="#4ADE80"/>
+  <circle cx="240" cy="155" r="28" fill="#4ADE80"/>
+</svg>
