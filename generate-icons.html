@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Icon Generator – Crescendo</title>
+<style>
+  body { font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 0 20px; background: #f0f4f8; }
+  h1 { font-size: 1.2rem; color: #1e3a5f; }
+  p  { color: #555; font-size: 0.9rem; }
+  .btn {
+    display: block; width: 100%; margin: 10px 0; padding: 12px 16px;
+    background: #0EA5E9; color: #fff; border: none; border-radius: 8px;
+    font-size: 1rem; cursor: pointer; text-align: left;
+  }
+  .btn:hover { background: #0284c7; }
+  .btn span { float: right; opacity: 0.7; font-size: 0.85rem; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+<h1>Crescendo – Icons generieren</h1>
+<p>Klick auf jeden Button, um die PNG-Datei herunterzuladen.<br>
+Speichere alle 4 Dateien im Projektordner <code>reading-tracker/</code>.</p>
+
+<button class="btn" onclick="download('favicon.png', 32)">
+  favicon.png <span>32 × 32 px</span>
+</button>
+<button class="btn" onclick="download('apple-touch-icon.png', 180)">
+  apple-touch-icon.png <span>180 × 180 px</span>
+</button>
+<button class="btn" onclick="download('icon-192.png', 192)">
+  icon-192.png <span>192 × 192 px</span>
+</button>
+<button class="btn" onclick="download('icon-512.png', 512)">
+  icon-512.png <span>512 × 512 px</span>
+</button>
+
+<canvas id="c"></canvas>
+
+<script>
+const svgSource = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="72" fill="#C9DDEB"/>
+  <path d="M256,365 L110,348 L110,445 L256,448 Z" fill="#F8F4EF"/>
+  <path d="M256,365 L110,348 L110,445 L256,448 Z" fill="none" stroke="#D4C9B8" stroke-width="2"/>
+  <path d="M256,365 L402,348 L402,445 L256,448 Z" fill="#F0EBE3"/>
+  <path d="M256,365 L402,348 L402,445 L256,448 Z" fill="none" stroke="#D4C9B8" stroke-width="2"/>
+  <path d="M110,348 L110,445" stroke="#2D5B8A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M402,348 L402,445" stroke="#2D5B8A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M110,348 L256,365" stroke="#2D5B8A" stroke-width="3" stroke-linecap="round"/>
+  <path d="M402,348 L256,365" stroke="#2D5B8A" stroke-width="3" stroke-linecap="round"/>
+  <line x1="138" y1="370" x2="243" y2="382" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="387" x2="243" y2="397" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="404" x2="243" y2="411" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="138" y1="420" x2="243" y2="425" stroke="#C8BFB0" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="382" x2="374" y2="370" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="397" x2="374" y2="387" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="411" x2="374" y2="404" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="269" y1="425" x2="374" y2="420" stroke="#BAB1A4" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="249" y="360" width="14" height="90" rx="5" fill="#2D5B8A"/>
+  <path d="M256,365 C254,330 252,295 256,240" stroke="#7C5C3A" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <path d="M253,300 C230,285 205,270 185,250" stroke="#7C5C3A" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <path d="M258,285 C280,268 308,255 330,238" stroke="#7C5C3A" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <path d="M220,267 C208,254 200,242 198,228" stroke="#7C5C3A" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M300,255 C312,243 318,230 316,215" stroke="#7C5C3A" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <circle cx="195" cy="215" r="62" fill="#1A7A43"/>
+  <circle cx="317" cy="205" r="62" fill="#1A7A43"/>
+  <circle cx="256" cy="175" r="70" fill="#1A7A43"/>
+  <circle cx="210" cy="200" r="55" fill="#27AE60"/>
+  <circle cx="302" cy="192" r="55" fill="#27AE60"/>
+  <circle cx="256" cy="162" r="65" fill="#27AE60"/>
+  <circle cx="226" cy="190" r="48" fill="#2ECC71"/>
+  <circle cx="286" cy="183" r="48" fill="#2ECC71"/>
+  <circle cx="256" cy="148" r="56" fill="#2ECC71"/>
+  <circle cx="256" cy="138" r="38" fill="#4ADE80"/>
+  <circle cx="240" cy="155" r="28" fill="#4ADE80"/>
+</svg>`;
+
+function download(filename, size) {
+  const canvas = document.getElementById('c');
+  canvas.width  = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const blob = new Blob([svgSource], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+
+  img.onload = () => {
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(img, 0, 0, size, size);
+    URL.revokeObjectURL(url);
+
+    canvas.toBlob(pngBlob => {
+      const a = document.createElement('a');
+      a.href     = URL.createObjectURL(pngBlob);
+      a.download = filename;
+      a.click();
+    }, 'image/png');
+  };
+
+  img.src = url;
+}
+</script>
+</body>
+</html>
