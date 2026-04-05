@@ -67,6 +67,7 @@
       }
       if(!b.createdAt) b.createdAt = new Date(b.year||new Date().getFullYear(), 0, 1).toISOString();
       if(!b.keywords) b.keywords = [];
+      if(!b.format) b.format = '';
       return b;
     });
     return s;
@@ -248,10 +249,10 @@
   .book-item{border:none;border-radius:10px;background:var(--card);transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);}
   .book-item.done{background:#f0f7f4;box-shadow:0 1px 3px rgba(0,0,0,0.05),0 0 0 1.5px #b0d4c0;}
   .book-item-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none;}
-  .book-item.done .book-title{text-decoration:line-through;color:var(--muted);}
+  .book-item.done .book-title{color:var(--muted);}
   .book-check{width:17px;height:17px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:transparent;transition:all 0.15s;}
   .book-item.done .book-check{background:var(--success);border-color:var(--success);color:white;}
-  .book-title{font-size:0.85rem;flex:1;text-transform:capitalize;}
+  .book-title{font-size:0.85rem;flex:1;}
   .book-meta{font-size:0.7rem;color:var(--muted);font-style:italic;}
   .book-pages{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);flex-shrink:0;}
   .book-year-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--cream);border-radius:6px;color:var(--muted);flex-shrink:0;}
@@ -533,29 +534,20 @@
 <!-- BÜCHER -->
 <div id="tab-books" class="tab-content">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.6rem;margin-top:0.4rem">
-    <div class="section-title" style="margin:0;border:none">Bücher</div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
+    <div style="display:flex;align-items:baseline;gap:0.5rem">
+      <div class="section-title" style="margin:0;border:none">Bücher</div>
+      <span id="books-status-counts" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.7rem">
+      <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
+      <button class="btn btn-primary btn-sm" onclick="openBookModal(null)">+ Buch hinzufügen</button>
+    </div>
   </div>
   <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.35rem">
     <div class="filter-row" id="books-status-filter"></div>
   </div>
   <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.85rem">
     <div class="filter-row" id="books-year-filter"></div>
-  </div>
-  <div class="card-sky" style="margin-bottom:0.85rem">
-    <div class="card-title">Neues Buch</div>
-    <div class="input-row">
-      <input type="text" id="new-book-title" placeholder="Titel…" style="flex:3;min-width:110px">
-      <input type="text" id="new-book-author" placeholder="Autor…" style="flex:2;min-width:80px">
-      <select id="new-book-type" style="min-width:95px">
-        <option value="">Typ…</option>
-        <option>Roman</option><option>Sachbuch</option><option>Biografie</option>
-        <option>Krimi</option><option>Fantasy</option><option>Lyrik</option><option>Sonstiges</option>
-      </select>
-      <input type="number" id="new-book-pages" placeholder="S." style="max-width:70px">
-      <select id="new-book-year" style="max-width:82px"></select>
-      <button class="btn btn-primary" onclick="addBook()">+ Hinzu</button>
-    </div>
   </div>
   <div class="book-list" id="book-list"></div>
 </div>
@@ -651,11 +643,49 @@
       <button class="btn btn-outline btn-sm" onclick="closeBookModal()" style="flex-shrink:0">✕</button>
     </div>
     <div id="book-modal-tabs">
-      <button class="active" onclick="switchBookModalTab('details',this)">Details</button>
+      <button class="active" onclick="switchBookModalTab('stammdaten',this)">Stammdaten</button>
+      <button onclick="switchBookModalTab('inhalt',this)">Inhalt</button>
+      <button onclick="switchBookModalTab('ki',this)">KI</button>
       <button onclick="switchBookModalTab('verlauf',this)">Verlauf</button>
-      <button onclick="switchBookModalTab('zitate',this)">Zitate</button>
     </div>
-    <div id="bmt-details" class="bm-tab active">
+    <div id="bmt-stammdaten" class="bm-tab active">
+      <div class="bm-field">
+        <label class="bm-label">Titel</label>
+        <input type="text" id="bm-edit-title" class="bm-input" placeholder="Buchtitel…">
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">Autor</label>
+        <input type="text" id="bm-edit-author" class="bm-input" placeholder="Autor…">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+        <div class="bm-field">
+          <label class="bm-label">Format</label>
+          <select id="bm-format" class="bm-input">
+            <option value="">—</option>
+            <option value="Buch">Buch</option>
+            <option value="E-Book">E-Book</option>
+            <option value="Hörbuch">Hörbuch</option>
+          </select>
+        </div>
+        <div class="bm-field">
+          <label class="bm-label">Typ</label>
+          <select id="bm-edit-type" class="bm-input">
+            <option value="">—</option>
+            <option>Roman</option><option>Sachbuch</option><option>Biografie</option>
+            <option>Krimi</option><option>Fantasy</option><option>Lyrik</option><option>Sonstiges</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+        <div class="bm-field">
+          <label class="bm-label">Seitenanzahl</label>
+          <input type="number" id="bm-edit-pages" class="bm-input" placeholder="Seiten" min="1">
+        </div>
+        <div class="bm-field">
+          <label class="bm-label">Jahr</label>
+          <input type="number" id="bm-edit-year" class="bm-input" placeholder="Jahr" min="1900" max="2099">
+        </div>
+      </div>
       <div class="bm-field">
         <label class="bm-label">Quelle / Empfehlung</label>
         <input type="text" id="bm-source" class="bm-input" placeholder="z.B. Empfehlung, Zeitungsartikel…">
@@ -664,14 +694,15 @@
         <label class="bm-label">Bewertung</label>
         <div id="bm-stars" class="star-widget"></div>
       </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+        <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+      </div>
+    </div>
+    <div id="bmt-inhalt" class="bm-tab">
       <div class="bm-field">
         <label class="bm-label">Notizen</label>
-        <textarea id="bm-notes" class="bm-input" rows="4" placeholder="Gedanken, Zitate, Zusammenfassung…" style="resize:vertical;min-height:80px"></textarea>
-      </div>
-      <div class="bm-field">
-        <label class="bm-label">KI-Zusammenfassung</label>
-        <div id="bm-ai-summary" class="bm-ai-summary"></div>
-        <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Zusammenfassung generieren</button>
+        <textarea id="bm-notes" class="bm-input" rows="4" placeholder="Gedanken, Zusammenfassung…" style="resize:vertical;min-height:80px"></textarea>
       </div>
       <div class="bm-field">
         <label class="bm-label">Keywords</label>
@@ -681,9 +712,31 @@
           <div id="bm-keyword-dd" style="display:none"></div>
         </div>
       </div>
+      <div class="bm-field" style="margin-top:0.8rem;border-top:1px solid var(--border);padding-top:0.8rem">
+        <label class="bm-label">Zitate</label>
+        <div id="bm-quotes-list"></div>
+        <div class="quote-add-form">
+          <label class="bm-label">Neues Zitat</label>
+          <textarea id="bm-quote-text" placeholder="Zitat eingeben…" rows="3"></textarea>
+          <div class="quote-form-row">
+            <input type="number" id="bm-quote-page" placeholder="Seite (opt.)" min="1" max="9999">
+            <button class="btn btn-primary btn-sm" onclick="addQuote()">+ Hinzufügen</button>
+          </div>
+        </div>
+        <div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.8rem">
+          <button class="btn btn-outline btn-sm" style="width:100%" onclick="openKindleImport()">Kindle Highlights importieren</button>
+        </div>
+      </div>
       <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
         <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
         <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+      </div>
+    </div>
+    <div id="bmt-ki" class="bm-tab">
+      <div class="bm-field">
+        <label class="bm-label">KI-Zusammenfassung</label>
+        <div id="bm-ai-summary" class="bm-ai-summary"></div>
+        <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Zusammenfassung generieren</button>
       </div>
     </div>
     <div id="bmt-verlauf" class="bm-tab">
@@ -693,20 +746,6 @@
         <tbody id="bm-log-body"></tbody>
       </table>
       <div class="empty" id="bm-log-empty" style="display:none">Noch keine Leseeinträge</div>
-    </div>
-    <div id="bmt-zitate" class="bm-tab">
-      <div id="bm-quotes-list"></div>
-      <div class="quote-add-form">
-        <label class="bm-label">Neues Zitat</label>
-        <textarea id="bm-quote-text" placeholder="Zitat eingeben…" rows="3"></textarea>
-        <div class="quote-form-row">
-          <input type="number" id="bm-quote-page" placeholder="Seite (opt.)" min="1" max="9999">
-          <button class="btn btn-primary btn-sm" onclick="addQuote()">+ Hinzufügen</button>
-        </div>
-      </div>
-      <div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.8rem">
-        <button class="btn btn-outline btn-sm" style="width:100%" onclick="openKindleImport()">Kindle Highlights importieren</button>
-      </div>
     </div>
   </div>
 </div>
@@ -805,7 +844,16 @@ function togglePositionMode(){
   updateLastPosHint();
 }
 
-function onLogBookChange(){updateLastPosHint();}
+function onLogBookChange(){
+  const bookId=parseInt(document.getElementById('log-book').value);
+  const book=state.books.find(b=>b.id===bookId);
+  if(book&&book.format){
+    const wantPercent=book.format==='E-Book'||book.format==='Hörbuch';
+    if(wantPercent&&positionMode!=='percent')togglePositionMode();
+    if(!wantPercent&&positionMode!=='page')togglePositionMode();
+  }
+  updateLastPosHint();
+}
 
 function updateLastPosHint(){
   const sel=document.getElementById('log-book');
@@ -1021,23 +1069,12 @@ function saveBookEdit(id){
   b.author=document.getElementById(`ea-${id}`).value.trim();
   b.type=document.getElementById(`ety-${id}`).value;
   b.pages=parseInt(document.getElementById(`ep-${id}`).value)||b.pages;
-  if(t)b.title=t.toLowerCase();
+  if(t)b.title=t;
   save();toast('Gespeichert ✓');renderBooks();populateBookSelect();
 }
 function deleteBook(id,e){
   e.stopPropagation();if(!confirm('Buch löschen?'))return;
   state.books=state.books.filter(b=>b.id!==id);save();renderBooks();populateBookSelect();
-}
-function addBook(){
-  const title=document.getElementById('new-book-title').value.trim();
-  const author=document.getElementById('new-book-author').value.trim();
-  const type=document.getElementById('new-book-type').value;
-  const pages=parseInt(document.getElementById('new-book-pages').value)||0;
-  const year=parseInt(document.getElementById('new-book-year').value);
-  if(!title){toast('Titel eingeben');return;}
-  state.books.push({id:state.nextId++,title:title.toLowerCase(),author,type,pages,year,status:'want_to_read',createdAt:new Date().toISOString(),keywords:[]});
-  save();['new-book-title','new-book-author','new-book-pages'].forEach(id=>document.getElementById(id).value='');
-  toast('Buch hinzugefügt ✓');renderBooks();populateBookSelect();
 }
 
 function getBookProgress(book){
@@ -1061,9 +1098,12 @@ function renderBooks(){
     sf.innerHTML=statuses.map(s=>`<button class="year-tab ${booksStatusF===s.v?'active':''}" onclick="toggleBooksStatus('${s.v}')">${s.l}</button>`).join('');}
   let books=state.books.filter(b=>booksYF.size===0||booksYF.has(b.year));
   if(booksStatusF!=='all')books=books.filter(b=>b.status===booksStatusF);
-  books=[...books].sort((a,b)=>a.year-b.year||a.title.localeCompare(b.title));
+  const statusOrder={reading:0,want_to_read:1,done:2};
+  books=[...books].sort((a,b)=>(statusOrder[a.status]??1)-(statusOrder[b.status]??1)||b.year-a.year||a.title.localeCompare(b.title));
   document.getElementById('books-count').textContent=books.length;
   document.getElementById('books-done').textContent=state.books.filter(b=>b.status==='done').length;
+  const scEl=document.getElementById('books-status-counts');
+  if(scEl){const r=state.books.filter(b=>b.status==='reading').length,w=state.books.filter(b=>b.status==='want_to_read').length,d=state.books.filter(b=>b.status==='done').length;const parts=[];if(r)parts.push(r+' Lese ich');if(w)parts.push(w+' Merkliste');if(d)parts.push(d+' Gelesen');scEl.textContent=parts.join(' · ');}
   const list=document.getElementById('book-list');
   if(!books.length){list.innerHTML='<div class="empty">Keine Bücher</div>';return;}
   const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
@@ -1277,7 +1317,7 @@ function renderSpeedByType(){
   <div class="speed-insight">${cap(slowest.type)}bücher liest du ${diffPct}% langsamer als ${fastest.type}bücher (${Math.round(slowest.pagesPerDay)} vs. ${Math.round(fastest.pagesPerDay)} S./Tag).</div>`;
 }
 // ── Book Detail Modal ────────────────────────────────────
-let _bmBookId=null,_bmRating=0,_bmKeywords=[],_kDropIdx=-1,_bmQuotes=[];
+let _bmBookId=null,_bmIsNew=false,_bmRating=0,_bmKeywords=[],_kDropIdx=-1,_bmQuotes=[];
 
 function getAllKeywords(){
   const kw=new Set();
@@ -1350,25 +1390,40 @@ function selectKeyword(k){
 }
 
 function openBookModal(id){
-  const b=state.books.find(b=>b.id===id);
-  if(!b)return;
-  _bmBookId=id;
+  const isNew=(id===null||id===undefined);
+  _bmIsNew=isNew;
+  let b;
+  if(isNew){
+    b={id:null,title:'',author:'',format:'',type:'',pages:'',year:CURRENT_YEAR,
+       status:'want_to_read',source:'',notes:'',rating:0,keywords:[],quotes:[]};
+  } else {
+    b=state.books.find(b=>b.id===id);
+    if(!b)return;
+  }
+  _bmBookId=isNew?null:id;
   _bmKeywords=[...(b.keywords||[])];
-  document.getElementById('bm-title').textContent=cap(b.title);
-  document.getElementById('bm-meta').textContent=[b.author,b.type,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
+  _bmQuotes=[...(b.quotes||[])];
+  document.getElementById('bm-title').textContent=isNew?'Neues Buch':cap(b.title);
+  document.getElementById('bm-meta').textContent=isNew?'':[b.author,b.format,b.type,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
+  // Stammdaten fields
+  document.getElementById('bm-edit-title').value=b.title||'';
+  document.getElementById('bm-edit-author').value=b.author||'';
+  document.getElementById('bm-format').value=b.format||'';
+  document.getElementById('bm-edit-type').value=b.type||'';
+  document.getElementById('bm-edit-pages').value=b.pages||'';
+  document.getElementById('bm-edit-year').value=b.year||'';
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-notes').value=b.notes||'';
   document.getElementById('bm-ai-summary').textContent=b.aiSummary||'';
   renderStarWidget(b.rating||0);
-  _bmQuotes=[...(b.quotes||[])];
   renderKeywordTags();
   document.getElementById('bm-keyword-input').value='';
   document.getElementById('bm-keyword-dd').style.display='none';
-  // show details tab
+  // show stammdaten tab
   document.querySelectorAll('.bm-tab').forEach(el=>{el.style.display='none';el.classList.remove('active');});
   document.querySelectorAll('#book-modal-tabs button').forEach(el=>el.classList.remove('active'));
-  document.getElementById('bmt-details').style.display='block';
-  document.getElementById('bmt-details').classList.add('active');
+  document.getElementById('bmt-stammdaten').style.display='block';
+  document.getElementById('bmt-stammdaten').classList.add('active');
   document.querySelector('#book-modal-tabs button').classList.add('active');
   document.getElementById('book-modal').style.display='flex';
   document.body.style.overflow='hidden';
@@ -1388,23 +1443,51 @@ function switchBookModalTab(tab,btn){
   if(t){t.style.display='block';t.classList.add('active');}
   btn.classList.add('active');
   if(tab==='verlauf')renderBookVerlauf(_bmBookId);
-  if(tab==='zitate')renderQuotesList();
+  if(tab==='inhalt'){renderQuotesList();renderKeywordTags();}
 }
 
 function saveBookDetails(){
-  if(_bmBookId==null)return;
-  const b=state.books.find(b=>b.id===_bmBookId);
-  if(!b)return;
-  b.source=document.getElementById('bm-source').value.trim();
-  b.notes=document.getElementById('bm-notes').value.trim();
-  b.rating=_bmRating;
-  b.keywords=[..._bmKeywords];
-  b.quotes=[..._bmQuotes];
-  save();toast('Gespeichert ✓');
+  const titleVal=document.getElementById('bm-edit-title').value.trim();
+  if(!titleVal){toast('Titel eingeben');return;}
+  if(_bmIsNew){
+    const newBook={
+      id:state.nextId++,
+      title:titleVal,
+      author:document.getElementById('bm-edit-author').value.trim(),
+      format:document.getElementById('bm-format').value,
+      type:document.getElementById('bm-edit-type').value,
+      pages:parseInt(document.getElementById('bm-edit-pages').value)||0,
+      year:parseInt(document.getElementById('bm-edit-year').value)||CURRENT_YEAR,
+      status:'want_to_read',
+      createdAt:new Date().toISOString(),
+      source:document.getElementById('bm-source').value.trim(),
+      notes:document.getElementById('bm-notes').value.trim(),
+      rating:_bmRating,
+      keywords:[..._bmKeywords],
+      quotes:[..._bmQuotes],
+    };
+    state.books.push(newBook);
+    save();toast('Buch hinzugefügt ✓');
+  } else {
+    const b=state.books.find(b=>b.id===_bmBookId);
+    if(!b)return;
+    b.title=titleVal;
+    b.author=document.getElementById('bm-edit-author').value.trim();
+    b.format=document.getElementById('bm-format').value;
+    b.type=document.getElementById('bm-edit-type').value;
+    b.pages=parseInt(document.getElementById('bm-edit-pages').value)||b.pages;
+    b.year=parseInt(document.getElementById('bm-edit-year').value)||b.year;
+    b.source=document.getElementById('bm-source').value.trim();
+    b.notes=document.getElementById('bm-notes').value.trim();
+    b.rating=_bmRating;
+    b.keywords=[..._bmKeywords];
+    b.quotes=[..._bmQuotes];
+    save();toast('Gespeichert ✓');
+  }
   document.getElementById('book-modal').style.display='none';
   document.body.style.overflow='';
-  _bmBookId=null;
-  renderBooks();
+  _bmBookId=null;_bmIsNew=false;
+  renderBooks();populateBookSelect();
 }
 
 function renderBookVerlauf(bookId){
@@ -1851,8 +1934,6 @@ window.initApp=function(){
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('header-year').textContent=CURRENT_YEAR;
-  const ny=document.getElementById('new-book-year');
-  if(ny)ny.innerHTML=allYears().map(y=>`<option value="${y}"${y===CURRENT_YEAR?' selected':''}>${y}</option>`).join('');
   document.getElementById('log-date').value=yesterdayStr();
   populateBookSelect();updateLastPosHint();refreshAll();
 };
