@@ -459,6 +459,13 @@
   .heatmap-month-lbl{width:11px;text-align:center;overflow:visible;white-space:nowrap;}
   .hm-cell{width:11px;height:11px;border-radius:2px;background:var(--slate-100);cursor:default;}
   .hm-cell.l1{background:#bae6fd;}.hm-cell.l2{background:#38bdf8;}.hm-cell.l3{background:#0ea5e9;}.hm-cell.l4{background:#0369a1;}
+  /* Heatmap portrait (mobile) */
+  .hmp-landscape{display:block;}.hmp-portrait{display:none;}
+  @media(max-width:639px){.hmp-landscape{display:none;}.hmp-portrait{display:block;}.heatmap-outer{overflow-x:visible;}}
+  .hmp-day-header{display:flex;gap:2px;margin-bottom:3px;padding-left:32px;}
+  .hmp-day-header span{width:11px;text-align:center;font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);}
+  .hmp-week-row{display:flex;gap:2px;margin-bottom:2px;align-items:center;}
+  .hmp-month-label{width:28px;font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;}
   /* ── Drag handle (modal) ── */
   .bm-drag-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 0.9rem;cursor:grab;}
   /* ── Goal progress on books tab ── */
@@ -510,8 +517,7 @@
     <button class="active" onclick="switchTab('today',this)">Tages-Log</button>
     <button onclick="switchTab('goal',this)">Jahres-Tracker</button>
     <button onclick="switchTab('books',this)">Bibliothek</button>
-    <button onclick="switchTab('years',this)">Statistiken</button>
-    <button onclick="switchTab('stats',this)">Insights</button>
+    <button onclick="switchTab('stats',this)">Statistiken</button>
     <button onclick="switchTab('kb',this)">Knowledge Base</button>
   </nav>
   <div id="topbar-right">
@@ -648,8 +654,8 @@
   <div class="book-list" id="book-list"></div>
 </div>
 
-<!-- JAHRE -->
-<div id="tab-years" class="tab-content">
+<!-- STATISTIK (inkl. Jahresvergleich) -->
+<div id="tab-stats" class="tab-content">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;margin-top:0.4rem">
     <div class="section-title" style="margin:0;border:none;padding:0">Jahresvergleich</div>
     <div class="filter-row" id="year-compare-filter"></div>
@@ -663,12 +669,9 @@
     <div class="section-title" style="margin:0;border:none;padding:0">Monatlicher Fortschritt</div>
     <div class="filter-row" id="monthly-year-filter"></div>
   </div>
-  <div class="card"><div class="chart-wrap" style="height:190px"><canvas id="chart-monthly"></canvas></div></div>
-</div>
-
-<!-- STATISTIK -->
-<div id="tab-stats" class="tab-content">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;margin-top:0.4rem">
+  <div class="card" style="margin-bottom:1.2rem"><div class="chart-wrap" style="height:190px"><canvas id="chart-monthly"></canvas></div></div>
+  <div class="divider"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem">
     <div class="section-title" style="margin:0;border:none;padding:0">Statistiken</div>
     <div class="filter-row" id="stats-year-filter"></div>
   </div>
@@ -746,27 +749,23 @@
     <svg viewBox="0 0 24 24"><path d="M12 2l2 7h7l-5.5 4 2 7L12 16l-5.5 4 2-7L3 9h7z"/></svg>
     <span>Heute</span>
   </button>
+  <button class="bn-btn" onclick="switchTab('goal',this)" data-tab="goal">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Ziel</span>
+  </button>
   <button class="bn-btn" onclick="switchTab('books',this)" data-tab="books">
     <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     <span>Bücher</span>
   </button>
-  <button class="bn-btn" onclick="switchTab('years',this)" data-tab="years">
+  <button class="bn-btn" onclick="switchTab('stats',this)" data-tab="stats">
     <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Statistiken</span>
   </button>
-  <button class="bn-btn" id="bn-more-btn" onclick="toggleMoreSheet()">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-    <span>Mehr</span>
+  <button class="bn-btn" onclick="switchTab('kb',this)" data-tab="kb">
+    <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <span>Wissen</span>
   </button>
 </nav>
-
-<!-- MORE SHEET (bottom nav overflow) -->
-<div id="more-sheet">
-  <button class="more-sheet-btn" onclick="switchTabExtra('goal');closeMoreSheet()">📊 Jahres-Tracker</button>
-  <button class="more-sheet-btn" onclick="switchTabExtra('stats');closeMoreSheet()">🔍 Insights</button>
-  <button class="more-sheet-btn" onclick="switchTabExtra('kb');closeMoreSheet()">📚 Knowledge Base</button>
-</div>
-<div id="more-sheet-overlay" onclick="closeMoreSheet()" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;z-index:109"></div>
 
 <!-- FLOATING ACTION BUTTON -->
 <button id="fab" onclick="openMiniLog()" title="Lesen erfassen">＋</button>
@@ -979,7 +978,6 @@ function switchTab(tab,btn){
   if(btn)btn.classList.add('active');
   document.title=TAB_TITLES[tab]||'Crescendo';
   document.querySelectorAll('.bn-btn[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  document.getElementById('bn-more-btn')?.classList.remove('active');
   if(tab==='kb')renderKB();else refreshAll();
 }
 
@@ -1450,6 +1448,7 @@ let selSY=new Set();
 function toggleSY(y){if(y==='all')selSY.clear();else selSY.has(y)?selSY.delete(y):selSY.add(y);renderStats();}
 
 function renderStats(){
+  renderYearCharts();
   const years=allYears(),sc=document.getElementById('stats-year-filter');
   if(sc){const all=selSY.size===0;
     sc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleSY('all')">Alle</button>`
@@ -2284,7 +2283,7 @@ function deleteConcept(id){
 }
 // ── End Knowledge Base ────────────────────────────────────
 
-window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderYearCharts();renderStats();renderHeatmap();checkYesterdayBanner()};
+window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();renderHeatmap();checkYesterdayBanner()};
 
 window.initApp=function(){
   document.getElementById('loading-screen').style.display='none';
@@ -2319,24 +2318,10 @@ window.addEventListener('online',()=>{
 });
 
 // ── Browser title map ─────────────────────────────────────
-const TAB_TITLES={today:'Crescendo · Tages-Log',goal:'Crescendo · Jahres-Tracker',books:'Crescendo · Bibliothek',years:'Crescendo · Statistiken',stats:'Crescendo · Insights',kb:'Crescendo · Knowledge Base'};
+const TAB_TITLES={today:'Crescendo · Tages-Log',goal:'Crescendo · Jahres-Tracker',books:'Crescendo · Bibliothek',stats:'Crescendo · Statistiken',kb:'Crescendo · Knowledge Base'};
 function switchTabExtra(tab){
   const topBtn=document.querySelector(`#topbar-nav button[onclick*="'${tab}'"]`);
   switchTab(tab,topBtn);
-  document.getElementById('bn-more-btn')?.classList.add('active');
-}
-
-// ── More sheet ────────────────────────────────────────────
-function toggleMoreSheet(){
-  const s=document.getElementById('more-sheet');
-  const o=document.getElementById('more-sheet-overlay');
-  const open=s.classList.toggle('open');
-  if(o)o.style.display=open?'block':'none';
-}
-function closeMoreSheet(){
-  document.getElementById('more-sheet')?.classList.remove('open');
-  const o=document.getElementById('more-sheet-overlay');
-  if(o)o.style.display='none';
 }
 
 // ── Reading streak ────────────────────────────────────────
@@ -2364,11 +2349,11 @@ function renderHeatmap(){
   const maxP=Math.max(1,...Object.values(pagesByDay));
   const today=new Date();
   const weeks=53;
-  // Start from Sunday, ~52 weeks ago
   const start=new Date(today);
   start.setDate(start.getDate()-start.getDay()-((weeks-1)*7));
   const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   const DAY_LABELS=['','Mo','','Mi','','Fr',''];
+  // ── Landscape (desktop) ──────────────────────────────────
   let weeksHTML='';
   let monthLabels=new Array(weeks).fill('');
   for(let w=0;w<weeks;w++){
@@ -2388,10 +2373,31 @@ function renderHeatmap(){
   }
   const monthRow='<div class="heatmap-month-row">'+monthLabels.map(m=>`<div class="heatmap-month-lbl">${m}</div>`).join('')+'</div>';
   const dayLabels='<div class="heatmap-days-col">'+DAY_LABELS.map(l=>`<div class="heatmap-day-lbl">${l}</div>`).join('')+'</div>';
-  container.innerHTML=`<div class="heatmap-outer"><div class="heatmap-inner">${dayLabels}<div><div class="heatmap-weeks">${weeksHTML}</div></div></div></div>`;
-  // Insert month row above weeks
-  const weeksEl=container.querySelector('.heatmap-weeks');
-  if(weeksEl)weeksEl.insertAdjacentHTML('beforebegin',monthRow);
+  const landscapeHTML=`<div class="heatmap-outer"><div class="heatmap-inner">${dayLabels}<div>${monthRow}<div class="heatmap-weeks">${weeksHTML}</div></div></div></div>`;
+  // ── Portrait (mobile) ────────────────────────────────────
+  let portraitHTML='<div class="hmp-day-header">'
+    +['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<span>${d}</span>`).join('')
+    +'</div>';
+  for(let w=0;w<weeks;w++){
+    let monthLabel='';
+    for(let d=0;d<7;d++){
+      const date=new Date(start);date.setDate(start.getDate()+w*7+d);
+      if(date.getDate()===1)monthLabel=MONTHS[date.getMonth()];
+    }
+    portraitHTML+=`<div class="hmp-week-row"><div class="hmp-month-label">${monthLabel}</div>`;
+    // Portrait: columns = Mon(d=1)..Sun(d=0), rows = weeks
+    for(let d=1;d<=7;d++){
+      const di=d%7; // 1→Mon,2→Tue,...,6→Sat,0→Sun
+      const date=new Date(start);date.setDate(start.getDate()+w*7+di);
+      if(date>today){portraitHTML+='<div class="hm-cell"></div>';continue;}
+      const ds=date.toISOString().slice(0,10);
+      const p=pagesByDay[ds]||0;
+      const lvl=p===0?'':p<maxP*0.25?'l1':p<maxP*0.5?'l2':p<maxP*0.75?'l3':'l4';
+      portraitHTML+=`<div class="hm-cell ${lvl}" title="${ds}: ${p} Seiten"></div>`;
+    }
+    portraitHTML+='</div>';
+  }
+  container.innerHTML=`<div class="hmp-landscape">${landscapeHTML}</div><div class="hmp-portrait">${portraitHTML}</div>`;
 }
 
 // ── Grid view toggle ──────────────────────────────────────
@@ -2475,7 +2481,7 @@ function addMiniLogEntry(){
 
 // ── Tab swipe gestures ────────────────────────────────────
 (function(){
-  const TAB_ORDER=['today','goal','books','years','stats','kb'];
+  const TAB_ORDER=['today','goal','books','stats','kb'];
   let tx=0,ty=0;
   const mainEl=document.querySelector('main')||document.body;
   mainEl.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
@@ -2483,14 +2489,17 @@ function addMiniLogEntry(){
     const dx=e.changedTouches[0].clientX-tx;
     const dy=e.changedTouches[0].clientY-ty;
     if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx)*0.7)return;
+    const sw=window.innerWidth;
+    const inLeftZone=tx<sw*0.3;
+    const inRightZone=tx>sw*0.7;
     const active=document.querySelector('.tab-content.active');
     if(!active)return;
     const cur=active.id.replace('tab-','');
     const idx=TAB_ORDER.indexOf(cur);
-    if(dx<0&&idx<TAB_ORDER.length-1){
+    if(dx<0&&inRightZone&&idx<TAB_ORDER.length-1){
       const next=TAB_ORDER[idx+1];
       switchTab(next,document.querySelector(`#topbar-nav button[onclick*="'${next}'"]`));
-    } else if(dx>0&&idx>0){
+    } else if(dx>0&&inLeftZone&&idx>0){
       const prev=TAB_ORDER[idx-1];
       switchTab(prev,document.querySelector(`#topbar-nav button[onclick*="'${prev}'"]`));
     }
