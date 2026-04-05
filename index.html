@@ -263,11 +263,13 @@
   .book-edit-row input,.book-edit-row select{font-family:'DM Mono',monospace;font-size:0.73rem;padding:0.28rem 0.45rem;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:8px;}
   .edit-toggle{background:none;border:none;cursor:pointer;color:var(--border);font-size:0.95rem;padding:0.1rem 0.28rem;transition:color 0.15s;flex-shrink:0;touch-action:manipulation;}
   .edit-toggle:hover,.edit-toggle:active{color:var(--sky-dark);}
-  .log-table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+  .log-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .log-table{width:100%;border-collapse:collapse;font-size:0.8rem;table-layout:fixed;}
   .log-table th{font-family:'Inter',sans-serif;font-size:11px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:10px 12px;background:var(--slate-50);border-bottom:1px solid var(--border);}
-  .log-table td{padding:10px 12px;border-bottom:1px solid var(--slate-100);}
+  .log-table td{padding:10px 12px;border-bottom:1px solid var(--slate-100);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .log-table tr:last-child td{border-bottom:none;}
   .log-table tr:hover td{background:var(--sky-50);}
+  @media(max-width:639px){.log-table .col-pos,.log-table .th-pos{display:none;}.card{padding:14px 14px;}}
   .delete-btn{background:none;border:none;color:var(--border);cursor:pointer;font-size:1rem;padding:0 0.25rem;transition:color 0.15s;}
   .delete-btn:hover,.delete-btn:active{color:var(--accent);}
   .filter-row{display:flex;gap:0.35rem;flex-wrap:wrap;}
@@ -563,12 +565,21 @@
     <div class="card"><div class="card-title">Ø/Tag</div><div class="big-number sky" id="stat-avg">0</div><div class="sub">dieses Jahr</div></div>
   </div>
   <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
-  <div class="card">
+  <div class="card" style="padding-left:0;padding-right:0">
+    <div class="log-table-wrap">
     <table class="log-table">
-      <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Δ Seiten</th><th style="text-align:right">Position</th><th></th></tr></thead>
+      <colgroup>
+        <col style="width:88px">
+        <col>
+        <col style="width:62px">
+        <col class="col-pos" style="width:68px">
+        <col style="width:36px">
+      </colgroup>
+      <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Δ&nbsp;S.</th><th class="th-pos" style="text-align:right">Position</th><th></th></tr></thead>
       <tbody id="log-body"></tbody>
     </table>
-    <div class="empty" id="log-empty" style="display:none">Noch keine Einträge</div>
+    </div>
+    <div class="empty" id="log-empty" style="display:none;padding:0 14px">Noch keine Einträge</div>
   </div>
 </div>
 
@@ -613,11 +624,14 @@
     </div>
   </div>
   <div class="section-title">Historische Ziele</div>
-  <div class="card">
+  <div class="card" style="padding-left:0;padding-right:0">
+    <div class="log-table-wrap">
     <table class="log-table">
-      <thead><tr><th>Jahr</th><th>Ziel</th><th>Erreicht</th><th>%</th></tr></thead>
+      <colgroup><col style="width:60px"><col><col><col style="width:52px"></colgroup>
+      <thead><tr><th style="padding-left:14px">Jahr</th><th>Ziel</th><th>Erreicht</th><th>%</th></tr></thead>
       <tbody id="goals-history-body"></tbody>
     </table>
+    </div>
   </div>
 </div>
 
@@ -1146,13 +1160,13 @@ function renderLog(){
   if(!logs.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   tbody.innerHTML=logs.map(l=>{
-    const posCell=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':' S.'}`:'\u2014';
+    const posCell=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':'\u00a0S.'}`:'\u2014';
     return`<tr>
-    <td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td>
-    <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cap(l.bookTitle)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:14px">${l.date}</td>
+    <td title="${cap(l.bookTitle)}">${cap(l.bookTitle)}</td>
     <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td>
-    <td style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
-    <td><button class="delete-btn" onclick="deleteEntry(${l.id})">×</button></td>
+    <td class="col-pos" style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
+    <td style="padding-right:14px"><button class="delete-btn" onclick="deleteEntry(${l.id})">×</button></td>
   </tr>`;}).join('');
   document.getElementById('log-year-label').textContent=`(${logs.length})`;
 }
@@ -1222,7 +1236,7 @@ function renderGoal(){
   const years=allYears().filter(y=>state.goals[y]);
   document.getElementById('goals-history-body').innerHTML=years.map(y=>{
     const g=state.goals[y],r=pagesThisYear(y),p=Math.round(r/g*100),ok=r>=g;
-    return`<tr><td style="font-family:'DM Mono',monospace">${y}</td><td>${g.toLocaleString('de')}</td><td>${r.toLocaleString('de')}</td>
+    return`<tr><td style="font-family:'DM Mono',monospace;padding-left:14px">${y}</td><td>${g.toLocaleString('de')}</td><td>${r.toLocaleString('de')}</td>
     <td style="color:${ok?'var(--success)':'var(--accent)'};font-family:'DM Mono',monospace">${p}%${ok?' ✓':''}</td></tr>`;
   }).join('');
 }
