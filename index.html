@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0EA5E9">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -196,7 +196,7 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5;}
-  #loading-screen{position:fixed;inset:0;background:var(--sky-50);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
+  #loading-screen{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--sky-50);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
   #loading-screen h2{font-family:'Inter',sans-serif;font-weight:600;font-size:22px;color:var(--text-primary);}
   #loading-screen h2 span{color:var(--sky-500);}
   .spinner{width:36px;height:36px;border:3px solid var(--sky-200);border-top-color:var(--sky-500);border-radius:50%;animation:spin 0.8s linear infinite;}
@@ -285,11 +285,13 @@
   .book-status-badge.want{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
   .book-status-badge.reading{background:var(--sky-light);color:var(--sky-dark);border:1px solid var(--sky-dark);}
   /* Book Detail Modal */
-  #book-modal{position:fixed;inset:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
+  #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
-  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12);animation:bmSlide 0.22s ease;}
+  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
   @media(min-width:560px){#book-modal-panel{border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.16);}}
+  @-webkit-keyframes bmFade{from{opacity:0;}to{opacity:1;}}
   @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
+  @-webkit-keyframes bmSlide{from{-webkit-transform:translateY(40px);transform:translateY(40px);opacity:0;}to{-webkit-transform:translateY(0);transform:translateY(0);opacity:1;}}
   @keyframes bmSlide{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
   #book-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:0.7rem;margin-bottom:1rem;}
   #book-modal-tabs{background:transparent;border-bottom:1px solid var(--border);display:flex;margin-bottom:1rem;}
@@ -344,7 +346,7 @@
   .speed-bar-mini-fill.slowest{background:var(--accent);}
   .speed-insight{margin-top:0.65rem;padding:0.55rem 0.75rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:10px;font-size:0.8rem;line-height:1.55;font-style:italic;color:var(--ink);}
   /* ── Login Screen ── */
-  #login-screen{display:none;position:fixed;inset:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+  #login-screen{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
   .login-logo{font-family:'Inter',sans-serif;font-size:22px;font-weight:600;color:var(--sky-500);margin-bottom:4px;}
   .login-sub{font-family:'Inter',sans-serif;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:32px;}
@@ -392,8 +394,9 @@
   .kb-book-ref-author{font-size:12px;color:var(--text-muted);}
   @media(max-width:700px){.kb-sidebar{width:100%;}.kb-layout{flex-direction:column;}}
   /* ── Bottom Navigation ── */
-  #bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:110;background:var(--surface);border-top:1px solid var(--border);padding:4px 4px env(safe-area-inset-bottom);height:calc(56px + env(safe-area-inset-bottom));align-items:flex-start;justify-content:space-around;}
-  @media(max-width:639px){#bottom-nav{display:flex;}#topbar-nav{display:none;}main{padding-bottom:calc(80px + env(safe-area-inset-bottom));}}
+  #bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:110;background:var(--surface);border-top:1px solid var(--border);padding:4px 4px env(safe-area-inset-bottom);height:calc(56px + env(safe-area-inset-bottom));}
+  #bottom-nav{-webkit-box-align:flex-start;align-items:flex-start;-webkit-justify-content:space-around;justify-content:space-around;}
+  @media(max-width:639px){#bottom-nav{display:-webkit-flex;display:flex;}#topbar-nav{display:none;}main{padding-bottom:calc(80px + env(safe-area-inset-bottom));}}
   .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;color:var(--text-secondary);padding:4px 2px;border-radius:8px;min-height:44px;min-width:44px;touch-action:manipulation;transition:color 150ms;}
   .bn-btn.active{color:var(--sky-700);}
   .bn-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
@@ -408,9 +411,10 @@
   #fab:active{transform:scale(0.94);}
   @media(min-width:640px){#fab{bottom:28px;right:28px;}}
   /* ── Mini Log Sheet ── */
-  #mini-log-sheet{position:fixed;bottom:0;left:0;right:0;z-index:115;background:var(--surface);border-radius:20px 20px 0 0;padding:1.2rem 1.2rem calc(1.4rem + env(safe-area-inset-bottom));box-shadow:0 -4px 32px rgba(0,0,0,0.14);transform:translateY(110%);transition:transform 0.28s cubic-bezier(0.32,0.72,0,1);max-width:640px;margin:0 auto;}
-  #mini-log-sheet.open{transform:translateY(0);}
-  #mini-log-overlay{position:fixed;inset:0;z-index:114;background:rgba(26,18,8,0.45);display:none;animation:bmFade 0.18s ease;}
+  #mini-log-sheet{position:fixed;bottom:0;left:0;right:0;z-index:115;background:var(--surface);border-radius:20px 20px 0 0;padding:1.2rem 1.2rem calc(1.4rem + env(safe-area-inset-bottom));box-shadow:0 -4px 32px rgba(0,0,0,0.14);-webkit-transform:translateY(110%);transform:translateY(110%);transition:-webkit-transform 0.28s cubic-bezier(0.32,0.72,0,1);transition:transform 0.28s cubic-bezier(0.32,0.72,0,1);}
+  @media(min-width:640px){#mini-log-sheet{left:50%;right:auto;width:640px;margin-left:-320px;}}
+  #mini-log-sheet.open{-webkit-transform:translateY(0);transform:translateY(0);}
+  #mini-log-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:114;background:rgba(26,18,8,0.45);display:none;animation:bmFade 0.18s ease;}
   #mini-log-overlay.open{display:block;}
   /* ── Toast types ── */
   .toast.t-success{border-color:var(--success);color:var(--success);}
@@ -433,7 +437,7 @@
   .book-grid-card:active{opacity:0.85;}
   .book-grid-card.done{background:#f0f7f4;box-shadow:0 0 0 1.5px #b0d4c0;}
   .book-grid-card.reading{background:var(--sky-light);box-shadow:0 0 0 1.5px var(--sky-dark);}
-  .book-grid-cover{width:100%;aspect-ratio:2/3;background:var(--slate-100);display:flex;align-items:center;justify-content:center;font-size:2.2rem;overflow:hidden;}
+  .book-grid-cover{width:100%;min-height:120px;aspect-ratio:2/3;background:var(--slate-100);display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;font-size:2.2rem;overflow:hidden;}
   .book-grid-cover img{width:100%;height:100%;object-fit:cover;}
   .book-grid-info{padding:0.5rem 0.55rem 0.6rem;}
   .book-grid-title{font-size:0.76rem;font-weight:500;line-height:1.3;margin-bottom:0.15rem;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -468,7 +472,7 @@
   .delete-btn{padding:0.35rem 0.5rem;min-height:36px;}
   .book-check{cursor:pointer;width:22px;height:22px;}
   /* ── Pull-to-refresh indicator ── */
-  #ptr-indicator{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-60px);z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);transition:transform 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+  #ptr-indicator{position:fixed;top:60px;left:50%;-webkit-transform:translateX(-50%) translateY(-60px);transform:translateX(-50%) translateY(-60px);z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);-webkit-transition:-webkit-transform 0.2s;transition:transform 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
   #ptr-indicator.ptr-ready{color:var(--sky-dark);}
 </style>
 </head>
@@ -762,7 +766,7 @@
   <button class="more-sheet-btn" onclick="switchTabExtra('stats');closeMoreSheet()">🔍 Insights</button>
   <button class="more-sheet-btn" onclick="switchTabExtra('kb');closeMoreSheet()">📚 Knowledge Base</button>
 </div>
-<div id="more-sheet-overlay" onclick="closeMoreSheet()" style="display:none;position:fixed;inset:0;z-index:109"></div>
+<div id="more-sheet-overlay" onclick="closeMoreSheet()" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;z-index:109"></div>
 
 <!-- FLOATING ACTION BUTTON -->
 <button id="fab" onclick="openMiniLog()" title="Lesen erfassen">＋</button>
@@ -908,7 +912,7 @@
 </div>
 
 <!-- KINDLE IMPORT MODAL -->
-<div id="kindle-modal" style="display:none;position:fixed;inset:0;background:rgba(26,18,8,0.55);z-index:200;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease" onclick="closeKindleImport(event)">
+<div id="kindle-modal" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:200;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease" onclick="closeKindleImport(event)">
   <div id="kindle-modal-panel" onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
       <div style="font-family:'Inter',sans-serif;font-weight:600;font-size:1rem">Kindle Highlights importieren</div>
@@ -2504,13 +2508,14 @@ function addMiniLogEntry(){
     if(!startY)return;
     const dy=e.touches[0].clientY-startY;
     if(dy>10){pulling=true;const progress=Math.min(1,dy/80);
-      if(ind){ind.style.transform=`translateX(-50%) translateY(${-60+60*progress}px)`;ind.textContent=dy>70?'↑ Loslassen zum Aktualisieren':'↓ Zum Aktualisieren ziehen';ind.classList.toggle('ptr-ready',dy>70);}
+      const tx=`translateX(-50%) translateY(${-60+60*progress}px)`;
+      if(ind){ind.style.webkitTransform=tx;ind.style.transform=tx;ind.textContent=dy>70?'↑ Loslassen zum Aktualisieren':'↓ Zum Aktualisieren ziehen';ind.classList.toggle('ptr-ready',dy>70);}
     }
   },{passive:true});
   window.addEventListener('touchend',async e=>{
     if(!pulling){startY=0;return;}
     const dy=e.changedTouches[0].clientY-startY;
-    if(ind){ind.style.transform='translateX(-50%) translateY(-60px)';ind.classList.remove('ptr-ready');}
+    if(ind){ind.style.webkitTransform='translateX(-50%) translateY(-60px)';ind.style.transform='translateX(-50%) translateY(-60px)';ind.classList.remove('ptr-ready');}
     if(dy>70&&window._firebaseReady){toast('Aktualisiere…','info');await loadFromFirebase();toast('Aktualisiert ✓','success');}
     startY=0;pulling=false;
   },{passive:true});
