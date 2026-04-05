@@ -740,12 +740,9 @@
       </div>
     </div>
     <div id="bmt-verlauf" class="bm-tab">
-      <div class="chart-wrap" style="height:175px;margin-bottom:1rem"><canvas id="bm-chart"></canvas></div>
-      <table class="log-table" id="bm-log-table">
-        <thead><tr><th>Datum</th><th style="text-align:right">Δ Seiten</th><th style="text-align:right">Position</th></tr></thead>
-        <tbody id="bm-log-body"></tbody>
-      </table>
-      <div class="empty" id="bm-log-empty" style="display:none">Noch keine Leseeinträge</div>
+      <div id="bm-verlauf-stats"></div>
+      <div id="bm-verlauf-chart-wrap" class="chart-wrap" style="height:155px;margin-bottom:1rem;display:none"><canvas id="bm-chart"></canvas></div>
+      <div id="bm-verlauf-timeline"></div>
     </div>
   </div>
 </div>
@@ -1491,22 +1488,83 @@ function saveBookDetails(){
 }
 
 function renderBookVerlauf(bookId){
+  const book=state.books.find(b=>b.id===bookId);
   const bl=state.logs.filter(l=>l.bookId===bookId).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
-  const tbody=document.getElementById('bm-log-body');
-  const empty=document.getElementById('bm-log-empty');
-  if(!bl.length){if(tbody)tbody.innerHTML='';if(empty)empty.style.display='block';destroyChart('bm-chart');return;}
-  if(empty)empty.style.display='none';
+  const statsEl=document.getElementById('bm-verlauf-stats');
+  const chartWrap=document.getElementById('bm-verlauf-chart-wrap');
+  const timelineEl=document.getElementById('bm-verlauf-timeline');
+  const fmtDate=ds=>{if(!ds)return'—';const[y,m,d]=ds.split('-');return`${d}.${m}.${y}`;};
+
+  // ── Stats ────────────────────────────────────────────────
+  if(statsEl&&book){
+    const startDate=bl.length?bl[0].date:null;
+    const lastDate=bl.length?bl[bl.length-1].date:null;
+    const totalPages=bl.reduce((s,l)=>s+(l.pages||0),0);
+    const activeDays=new Set(bl.map(l=>l.date)).size;
+    const avgPpd=activeDays>0?Math.round(totalPages/activeDays):null;
+    const createdDate=book.createdAt?book.createdAt.slice(0,10):null;
+    const statItems=[
+      {l:'Angelegt',v:fmtDate(createdDate)},
+      {l:'Gestartet',v:fmtDate(startDate)},
+      book.status==='done'?{l:'Abgeschlossen',v:fmtDate(lastDate)}:null,
+      {l:'Lesetage',v:activeDays||'—'},
+      avgPpd!=null?{l:'Ø Seiten/Tag',v:avgPpd}:null,
+    ].filter(Boolean);
+    statsEl.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.45rem;margin-bottom:1rem">${
+      statItems.map(s=>`<div style="background:var(--slate-50);border-radius:8px;padding:0.4rem 0.55rem"><div style="font-family:'DM Mono',monospace;font-size:0.56rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.15rem">${s.l}</div><div style="font-family:'DM Mono',monospace;font-size:0.75rem;font-weight:500">${s.v}</div></div>`).join('')
+    }</div>`;
+  }
+
+  // ── Chart ────────────────────────────────────────────────
+  destroyChart('bm-chart');
+  if(!bl.length){
+    if(chartWrap)chartWrap.style.display='none';
+    if(timelineEl)timelineEl.innerHTML='<div class="empty" style="padding:0.8rem 0">Noch keine Leseeinträge</div>';
+    return;
+  }
+  if(chartWrap)chartWrap.style.display='block';
   let cum=0;const labels=[],data=[];
   bl.forEach(l=>{cum+=l.pages;labels.push(l.date.slice(5));data.push(cum);});
-  destroyChart('bm-chart');
   const cvs=document.getElementById('bm-chart');
   if(cvs)charts['bm-chart']=new Chart(cvs.getContext('2d'),{type:'line',
     data:{labels,datasets:[{data,borderColor:'#a8c4d8',backgroundColor:'rgba(168,196,216,0.12)',fill:true,tension:0.3,pointRadius:3,borderWidth:2}]},
     options:{...CD,plugins:{legend:{display:false}},scales:{...CD.scales,x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxTicksLimit:8}},y:{...CD.scales.y,beginAtZero:true}}}});
-  if(tbody)tbody.innerHTML=bl.map(l=>{
-    const pos=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':' S.'}`:'\u2014';
-    return`<tr><td style="font-family:'DM Mono',monospace;font-size:0.73rem">${l.date}</td><td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td><td style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted)">${pos}</td></tr>`;
-  }).join('');
+
+  // ── Timeline ─────────────────────────────────────────────
+  if(timelineEl&&book){
+    const events=[];
+    const createdDate=book.createdAt?book.createdAt.slice(0,10):null;
+    if(createdDate)events.push({date:createdDate,type:'created',icon:'＋',label:'Buch angelegt'});
+    // Group log entries by date
+    const byDate={};
+    bl.forEach(l=>{if(!byDate[l.date])byDate[l.date]={pages:0,last:null};byDate[l.date].pages+=l.pages;byDate[l.date].last=l;});
+    const dateEntries=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+    dateEntries.forEach(([date,{pages,last}],idx)=>{
+      const pos=last.currentPosition!=null?`${last.currentPosition}${last.positionType==='percent'?'%':' S.'}`:null;
+      const isFirst=idx===0;
+      events.push({date,type:isFirst?'started':'session',icon:isFirst?'▶':'○',
+        label:isFirst?`Lesen gestartet · ${pages} Seiten`:`${pages} Seiten gelesen`,
+        detail:pos?`Position: ${pos}`:null});
+    });
+    if(book.status==='done'&&dateEntries.length){
+      const lastDate=dateEntries[dateEntries.length-1][0];
+      events.push({date:lastDate,type:'done',icon:'✓',label:'Fertig gelesen'});
+    }
+    // Sort: by date, then created < started < session < done
+    const tOrd={created:0,started:1,session:2,done:3};
+    events.sort((a,b)=>a.date.localeCompare(b.date)||(tOrd[a.type]??2)-(tOrd[b.type]??2));
+    const colorFor=t=>t==='done'?'var(--success)':t==='started'?'var(--sky-dark)':t==='created'?'var(--muted)':'var(--ink)';
+    const weightFor=t=>t==='session'?'400':'500';
+    timelineEl.innerHTML=`<div style="position:relative;padding-left:1.4rem">`
+      +`<div style="position:absolute;left:0.4rem;top:0.5rem;bottom:0.5rem;width:1.5px;background:var(--border)"></div>`
+      +events.map(ev=>`<div style="position:relative;margin-bottom:0.8rem">`
+        +`<div style="position:absolute;left:-1.38rem;top:0.1rem;width:1rem;height:1rem;background:var(--card);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.5rem;color:${colorFor(ev.type)}">${ev.icon}</div>`
+        +`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);line-height:1.3">${fmtDate(ev.date)}</div>`
+        +`<div style="font-size:0.78rem;font-weight:${weightFor(ev.type)};color:${colorFor(ev.type)};line-height:1.3">${ev.label}</div>`
+        +(ev.detail?`<div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted)">${ev.detail}</div>`:'')
+        +`</div>`).join('')
+      +`</div>`;
+  }
 }
 // ── Quotes ───────────────────────────────────────────────
 function renderQuotesList(){
