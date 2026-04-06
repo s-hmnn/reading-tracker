@@ -863,6 +863,10 @@
           <div id="bm-author-dd" style="display:none"></div>
         </div>
       </div>
+      <div class="bm-field">
+        <label class="bm-label">ISBN-13 <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="text" id="bm-isbn" class="bm-input" placeholder="z.B. 978-3-…" inputmode="numeric">
+      </div>
       <div style="display:flex;justify-content:flex-end;margin-top:-0.2rem;margin-bottom:0.2rem">
         <button type="button" class="btn btn-outline btn-sm" onclick="lookupBookMetadata()" id="bm-lookup-btn" title="Metadaten automatisch aus Google Books laden">🔍 Buch suchen</button>
       </div>
@@ -907,10 +911,6 @@
       <div class="bm-field">
         <label class="bm-label">Quelle / Empfehlung</label>
         <input type="text" id="bm-source" class="bm-input" placeholder="z.B. Empfehlung, Zeitungsartikel…">
-      </div>
-      <div class="bm-field">
-        <label class="bm-label">ISBN <span style="font-weight:400;color:var(--muted)">(optional, für Cover-Suche)</span></label>
-        <input type="text" id="bm-isbn" class="bm-input" placeholder="z.B. 978-3-…">
       </div>
       <div class="bm-field">
         <label class="bm-label">Cover-URL <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
