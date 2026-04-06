@@ -2828,18 +2828,27 @@ function previewCover(){
   if(url){thumb.src=url;thumb.style.display='block';}
   else thumb.style.display='none';
 }
+// Cache: letztes Google-Books-Ergebnis für ~30s, um Doppelrequests zu vermeiden
+let _gbCache={key:'',vol:null,ts:0};
+async function _fetchGoogleBooks(q){
+  const now=Date.now();
+  if(_gbCache.key===q&&now-_gbCache.ts<30000)return _gbCache.vol;
+  const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+  if(res.status===429)return null; // Rate-limit → Fallback
+  if(!res.ok)return null;
+  const data=await res.json();
+  const vol=data?.items?.[0]?.volumeInfo||null;
+  _gbCache={key:q,vol,ts:Date.now()};
+  return vol;
+}
 async function fetchCoverUrl(title,author,isbn){
-  // Primär: Google Books API (bessere Abdeckung, unterstützt ISBN)
+  // Primär: Google Books API
   try{
     let q;
-    if(isbn){
-      q='isbn:'+isbn.replace(/[-\s]/g,'');
-    }else{
-      q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
-    }
-    const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
-    const data=await res.json();
-    const img=data?.items?.[0]?.volumeInfo?.imageLinks;
+    if(isbn) q='isbn:'+isbn.replace(/[-\s]/g,'');
+    else q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
+    const vol=await _fetchGoogleBooks(q);
+    const img=vol?.imageLinks;
     if(img){
       const url=(img.extraLarge||img.large||img.medium||img.thumbnail||'')
         .replace('&edge=curl','').replace('http://','https://');
@@ -2897,15 +2906,10 @@ async function lookupBookMetadata(){
   try{
     const isbn=document.getElementById('bm-isbn').value.trim();
     let q;
-    if(isbn){
-      q='isbn:'+isbn.replace(/[-\s]/g,'');
-    }else{
-      q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
-    }
-    const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
-    const data=await res.json();
-    const vol=data?.items?.[0]?.volumeInfo;
-    if(!vol){toast('Kein Eintrag gefunden','error');return;}
+    if(isbn) q='isbn:'+isbn.replace(/[-\s]/g,'');
+    else q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
+    const vol=await _fetchGoogleBooks(q);
+    if(!vol){toast('Kein Eintrag gefunden (ggf. Rate-Limit – kurz warten)','error');return;}
     const filled=[];
     // ISBN
     if(!document.getElementById('bm-isbn').value.trim()){
