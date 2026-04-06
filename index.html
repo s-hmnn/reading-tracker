@@ -384,6 +384,14 @@
   .kb-ai-text{font-size:14px;color:#334155;line-height:1.8;white-space:pre-wrap;}
   .kb-ai-skeleton{height:80px;background:linear-gradient(90deg,var(--sky-100) 25%,var(--sky-50) 50%,var(--sky-100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
   @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  .ai-structured{font-size:14px;color:#334155;line-height:1.7;}
+  .ai-thesis{font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:14px;padding:10px 14px;background:var(--sky-100);border-left:3px solid var(--sky-500);border-radius:0 8px 8px 0;}
+  .ai-meta-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;color:var(--text-secondary);}
+  .ai-meta-item span{font-weight:500;color:var(--text-primary);}
+  .ai-theme-block{margin-bottom:14px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);}
+  .ai-theme-name{font-size:12px;font-weight:600;color:var(--sky-700);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+  .ai-theme-desc{font-size:13px;color:var(--text-secondary);margin-bottom:6px;}
+  .ai-theme-quote{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);padding:4px 8px;background:var(--slate-50);border-radius:4px;margin-top:3px;}
   .kb-section-title{font-size:12px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;margin:20px 0 10px;}
   .kb-concepts-chips{display:flex;flex-wrap:wrap;gap:6px;}
   .kb-concept-chip{font-size:13px;padding:4px 12px;background:var(--sky-100);color:var(--sky-700);border:1px solid var(--sky-200);border-radius:999px;cursor:pointer;transition:background 120ms;}
@@ -899,9 +907,9 @@
     </div>
     <div id="bmt-ki" class="bm-tab">
       <div class="bm-field">
-        <label class="bm-label">KI-Zusammenfassung</label>
+        <label class="bm-label">KI-Leserzusammenfassung</label>
         <div id="bm-ai-summary" class="bm-ai-summary"></div>
-        <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Zusammenfassung generieren</button>
+        <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Analyse generieren</button>
       </div>
     </div>
     <div id="bmt-verlauf" class="bm-tab">
@@ -1706,7 +1714,12 @@ function openBookModal(id){
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-cover-url').value=b.cover_url||'';
   document.getElementById('bm-notes').value=b.notes||'';
-  document.getElementById('bm-ai-summary').textContent=b.aiSummary||'';
+  document.getElementById('bm-ai-summary').innerHTML=b.aiSummary?renderAiSummaryHTML(b.aiSummary):'';
+  const _aiBtn=document.getElementById('bm-ai-btn');
+  const _hasMaterial=(b.quotes||[]).length>=3||!!b.notes;
+  _aiBtn.disabled=!_hasMaterial;
+  _aiBtn.title=_hasMaterial?'':'Zu wenig Material';
+  _aiBtn.textContent=b.aiSummary?'KI-Analyse neu generieren':'KI-Analyse generieren';
   renderStarWidget(b.rating||0);
   renderKeywordTags();
   document.getElementById('bm-keyword-input').value='';
@@ -2068,57 +2081,109 @@ function importKindleHighlights() {
 // ── End Book Detail Modal ────────────────────────────────
 
 // ── KI-Zusammenfassung ───────────────────────────────────
+function renderAiSummaryHTML(aiSummary) {
+  try {
+    const d = JSON.parse(aiSummary);
+    if (!d.kernthese) throw new Error();
+    const themenHTML = (d.themen||[]).map(t =>
+      `<div class="ai-theme-block">
+        <div class="ai-theme-name">${t.name}</div>
+        <div class="ai-theme-desc">${t.beschreibung}</div>
+        ${(t.zitate||[]).map(z=>`<div class="ai-theme-quote">„${z}"</div>`).join('')}
+      </div>`).join('');
+    return `<div class="ai-structured">
+      <div class="ai-thesis">${d.kernthese}</div>
+      <div class="ai-meta-row">
+        <div class="ai-meta-item">Frage: <span>${d.zentraleFrage||''}</span></div>
+        <div class="ai-meta-item">Ton: <span>${d.tonalitaet||''}</span></div>
+      </div>
+      ${themenHTML}
+    </div>`;
+  } catch {
+    return `<div style="white-space:pre-wrap;font-size:13px;color:#334155">${aiSummary}</div>`;
+  }
+}
+
 async function generateBookSummary(bookId) {
   const btn = document.getElementById('bm-ai-btn');
   const display = document.getElementById('bm-ai-summary');
-  btn.disabled = true;
-  btn.textContent = 'Generiere…';
-  display.textContent = '';
-
-  if (!window._anthropicKey) { toast('API Key nicht gefunden'); btn.disabled = false; btn.textContent = 'KI-Zusammenfassung generieren'; return; }
   const b = state.books.find(b => b.id === bookId);
-  if (!b) { btn.disabled = false; btn.textContent = 'KI-Zusammenfassung generieren'; return; }
+  if (!b) return;
 
-  const quotesText = (b.quotes || []).map(q => `- "${q.text}" (S. ${q.page})`).join('\n');
-  const prompt = `Du analysierst Lesenotizen für das Buch "${b.title}" von ${b.author}.
+  const hasMaterial = (b.quotes||[]).length >= 3 || !!b.notes;
+  if (!hasMaterial) { toast('Zu wenig Material'); return; }
+  if (!window._anthropicKey) { toast('API Key nicht gefunden'); return; }
 
-Notizen: ${b.notes || '(keine)'}
+  btn.disabled = true;
+  btn.textContent = 'Analysiere…';
+  display.innerHTML = '<div class="kb-ai-skeleton" style="min-height:60px"></div>';
 
-Markierte Zitate:
-${quotesText || '(keine)'}
-
-Keywords: ${(b.keywords || []).join(', ') || '(keine)'}
-
-Erstelle eine strukturierte Zusammenfassung (max. 200 Wörter) der wichtigsten Gedanken und Erkenntnisse aus diesen Notizen.`;
+  const quotesText = (b.quotes||[]).map(q=>`- "${q.text}" (S. ${q.page||'?'})`).join('\n');
+  const allTitles = state.books.filter(x=>x.id!==bookId).map(x=>x.title).join(', ');
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': window._anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'anthropic-dangerous-allow-browser': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: prompt }]
-      })
+    // ── Call 1: Haiku → Output B (aiMeta) ────────────────
+    const metaPrompt = `Du analysierst das Buch "${b.title}" von ${b.author||'unbekannt'}.
+
+Zitate:
+${quotesText||'(keine)'}
+Notizen: ${b.notes||'(keine)'}
+Keywords: ${(b.keywords||[]).join(', ')||'(keine)'}
+Andere Bücher in der Bibliothek: ${allTitles||'(keine)'}
+
+Antworte NUR mit einem JSON-Objekt ohne Markdown-Fences:
+{"thesis":"Kernthese 1-2 Sätze","themes":["Thema1","Thema2"],"tone":"Tonalität","centralQuestion":"Zentrale Frage","relatedBooks":["Buchtitel aus Bibliothek die passen"]}`;
+
+    const metaRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'x-api-key':window._anthropicKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-allow-browser':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:metaPrompt}]})
     });
-    if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || response.status); }
-    const data = await response.json();
-    const summary = data.content[0].text;
-    b.aiSummary = summary;
+    if (!metaRes.ok) { const err=await metaRes.json(); throw new Error(err.error?.message||metaRes.status); }
+    const metaData = await metaRes.json();
+    let aiMeta = {};
+    try { aiMeta = JSON.parse(metaData.content[0].text); } catch { aiMeta = {}; }
+    b.aiMeta = aiMeta;
+
+    // ── Call 2: Sonnet → Output A (aiSummary) ────────────
+    const summaryPrompt = `Du analysierst "${b.title}" von ${b.author||'unbekannt'} nach Adlers analytischer Lese-Methode.
+
+Voranalyse:
+- Kernthese: ${aiMeta.thesis||'(unbekannt)'}
+- Zentrale Frage: ${aiMeta.centralQuestion||'(unbekannt)'}
+- Tonalität: ${aiMeta.tone||'(unbekannt)'}
+- Themen laut Voranalyse: ${(aiMeta.themes||[]).join(', ')||'(keine)'}
+
+Vollständiges Material:
+${quotesText||'(keine Zitate)'}
+Notizen: ${b.notes||'(keine)'}
+
+Antworte NUR mit diesem JSON (kein Markdown, keine Einleitung):
+{"kernthese":"1-2 Sätze","zentraleFrage":"...","tonalitaet":"...","themen":[{"name":"Thema","beschreibung":"1 Erläuterungssatz","zitate":["Zitattext (S. X)"]}]}
+Weise treffende Zitate den Themen zu. Identifiziere 4-6 Themen. Pro Thema 1-2 Zitate.`;
+
+    const summaryRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'x-api-key':window._anthropicKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-allow-browser':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:summaryPrompt}]})
+    });
+    if (!summaryRes.ok) { const err=await summaryRes.json(); throw new Error(err.error?.message||summaryRes.status); }
+    const summaryData = await summaryRes.json();
+    const rawText = summaryData.content[0].text;
+    JSON.parse(rawText); // Validierung — wirft bei ungültigem JSON
+    b.aiSummary = rawText;
     b.aiSummaryDate = Date.now();
     save();
-    display.textContent = summary;
-    toast('KI-Zusammenfassung gespeichert ✓');
+
+    display.innerHTML = renderAiSummaryHTML(b.aiSummary);
+    btn.textContent = 'KI-Analyse neu generieren';
+    toast('KI-Analyse gespeichert ✓');
   } catch(e) {
-    toast('Fehler: ' + (e.message || 'Unbekannter Fehler'));
+    display.innerHTML = '';
+    toast('Fehler: ' + (e.message||'Unbekannter Fehler'));
   } finally {
     btn.disabled = false;
-    btn.textContent = 'KI-Zusammenfassung generieren';
+    if (!btn.textContent.includes('neu')) btn.textContent = 'KI-Analyse generieren';
   }
 }
 // ── End KI-Zusammenfassung ───────────────────────────────
@@ -2184,18 +2249,25 @@ function renderKBBookDetail(bookId){
   detail.innerHTML=`
     <div class="kb-detail-title">${cap(b.title)}</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">${b.author||''} ${b.year?'· '+b.year:''}</div>
-    ${b.aiSummary?`
-    <div class="kb-ai-card">
-      <span class="kb-ai-label">✦ KI-Zusammenfassung</span>
-      <div class="kb-ai-text">${b.aiSummary}</div>
-    </div>`:`
-    <div class="kb-ai-card" style="display:flex;align-items:center;gap:12px">
-      <div style="flex:1">
-        <span class="kb-ai-label">✦ KI-Zusammenfassung</span>
-        <div style="font-size:13px;color:var(--text-muted)">Noch keine Zusammenfassung generiert</div>
-      </div>
-      <button class="btn btn-sky btn-sm" id="kb-gen-btn" onclick="kbGenerateSummary(${bookId})">Generieren</button>
-    </div>`}
+    ${(()=>{
+      const hasM=(b.quotes||[]).length>=3||!!b.notes;
+      if(b.aiSummary){
+        return `<div class="kb-ai-card">
+          <span class="kb-ai-label">✦ KI-Leserzusammenfassung</span>
+          <div class="kb-ai-text">${renderAiSummaryHTML(b.aiSummary)}</div>
+          <button class="btn btn-sky btn-sm" style="margin-top:10px" id="kb-gen-btn"
+            onclick="kbGenerateSummary(${bookId})" ${hasM?'':'disabled title="Zu wenig Material"'}>Neu generieren</button>
+        </div>`;
+      }
+      return `<div class="kb-ai-card" style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <span class="kb-ai-label">✦ KI-Leserzusammenfassung</span>
+          <div style="font-size:13px;color:var(--text-muted)">Noch keine Zusammenfassung generiert</div>
+        </div>
+        <button class="btn btn-sky btn-sm" id="kb-gen-btn"
+          onclick="kbGenerateSummary(${bookId})" ${hasM?'':'disabled title="Zu wenig Material"'}>Generieren</button>
+      </div>`;
+    })()}
     ${(b.quotes||[]).length?`
     <div class="kb-section-title">Zitate</div>
     ${b.quotes.map(q=>`
