@@ -2733,7 +2733,79 @@ window._importMatildeHistory = async function(){
   await save();refreshAll();
   alert(`✓ ${toAdd.length} Bücher importiert.\n${IMPORT.length-toAdd.length} bereits vorhanden und übersprungen.`);
 };
-// ── End historischer Import ────────────────────────────────────────────────
+// ── End historischer Import Matilde ───────────────────────────────────────
+
+// ── Einmaliger Import Stefan's Buchliste ──────────────────────────────────
+// Aufruf einmalig in der Browser-Konsole: _importStefanHistory()
+window._importStefanHistory = async function(){
+  const now = new Date().toISOString();
+  const BOOKS = [
+    // ── Merkliste 2026 ──────────────────────────────────────────────────
+    {title:'Factfulness',author:'Hans Rosling',pages:341,year:2026,status:'want_to_read',format:'',type:'Sachbuch',rating:null,source:''},
+    // Situation und Konstellation (Hartmut Rosa, 2021 Essay-Band)
+    {title:'Situation und Konstellation',author:'Hartmut Rosa',pages:140,year:2026,status:'want_to_read',format:'',type:'Sachbuch',rating:null,source:''},
+    // Für Polina – wahrscheinlich Wladimir Kaminer
+    {title:'Für Polina',author:'Wladimir Kaminer',pages:224,year:2026,status:'want_to_read',format:'',type:'Roman',rating:null,source:''},
+    // Singularitäten – Autor unklar
+    {title:'Singularitäten',author:'',pages:0,year:2026,status:'want_to_read',format:'',type:'',rating:null,source:''},
+    // Polarisierung – Autor unklar, Format EBook
+    {title:'Polarisierung',author:'',pages:0,year:2026,status:'want_to_read',format:'E-Book',type:'Sachbuch',rating:null,source:''},
+    // Was wir wissen könnten – Autor unklar
+    {title:'Was wir wissen könnten',author:'',pages:0,year:2026,status:'want_to_read',format:'',type:'Sachbuch',rating:null,source:''},
+    // Organisch – Giulia Enders (Darm mit Charme-Autorin, neues Werk)
+    {title:'Organisch',author:'Giulia Enders',pages:0,year:2026,status:'want_to_read',format:'',type:'Sachbuch',rating:null,source:''},
+    // Nelio Biedermann Lazar – Titel oder Personenname unklar
+    {title:'Nelio Biedermann Lazar',author:'',pages:0,year:2026,status:'want_to_read',format:'',type:'',rating:null,source:''},
+    // ── Aktuell am Lesen 2026 ──────────────────────────────────────────
+    {title:'Das Zielsatz Prinzip',author:'Stefan Wachtel',pages:180,year:2026,status:'reading',format:'Buch',type:'Sachbuch',rating:null,source:'Gabors Morning Briefing'},
+    // ── Gelesen 2025 ───────────────────────────────────────────────────
+    {title:'Win the inside game',author:'Steve Magness',pages:272,year:2025,status:'done',format:'Buch',type:'Sachbuch',rating:null,source:''},
+    {title:'Corpus Delicti - Ein Prozess',author:'Juli Zeh',pages:204,year:2025,status:'done',format:'Buch',type:'Roman',rating:3,source:'Buchhandlung gesehen'},
+    {title:'Melody',author:'Martin Suter',pages:256,year:2025,status:'done',format:'Buch',type:'Roman',rating:4.5,source:''},
+    {title:'Vom Ende der Einsamkeit',author:'Benedikt Wells',pages:352,year:2025,status:'done',format:'Buch',type:'Roman',rating:4.5,source:'Bestseller'},
+    {title:'Isidor - Ein jüdisches Leben',author:'Shelly Kupferberg',pages:256,year:2025,status:'done',format:'Buch',type:'Sachbuch',rating:4,source:'Buchhandlung Milan'},
+    {title:'Man vergisst nicht, wie man schwimmt',author:'Christian Huber',pages:304,year:2025,status:'done',format:'Buch',type:'Roman',rating:4.5,source:''},
+    // ── Gelesen 2024 ───────────────────────────────────────────────────
+    {title:'Leonard und Paul',author:'Ronan Hession',pages:224,year:2024,status:'done',format:'Buch',type:'Roman',rating:3.5,source:'Buchhandlung Thalia'},
+  ];
+
+  // Log-Einträge für Bücher mit bekannten Lesedaten (je 1 Eintrag am letzten Lesetag)
+  const LOG_DATA = [
+    {bookTitle:'Win the inside game',       date:'2025-09-02', pages:272, currentPosition:272, positionType:'page'},
+    {bookTitle:'Corpus Delicti - Ein Prozess',date:'2025-04-14',pages:204, currentPosition:204, positionType:'page'},
+    {bookTitle:'Melody',                     date:'2025-04-02', pages:256, currentPosition:256, positionType:'page'},
+    {bookTitle:'Vom Ende der Einsamkeit',    date:'2025-01-13', pages:352, currentPosition:352, positionType:'page'},
+    {bookTitle:'Leonard und Paul',           date:'2024-12-31', pages:224, currentPosition:224, positionType:'page'},
+  ];
+
+  const existing=new Set(state.books.map(b=>b.title.trim().toLowerCase()));
+  const toAdd=BOOKS.filter(b=>!existing.has(b.title.trim().toLowerCase()));
+  toAdd.forEach(b=>{
+    state.books.push({
+      id:state.nextId++,
+      title:b.title, author:b.author, pages:b.pages, year:b.year,
+      status:b.status, format:b.format, type:b.type,
+      notes:'', quotes:[], keywords:[], cover_url:'',
+      rating:b.rating, source:b.source,
+      createdAt:new Date(b.year,0,1).toISOString()
+    });
+  });
+
+  let logsAdded=0;
+  LOG_DATA.forEach(l=>{
+    const book=state.books.find(b=>b.title.trim().toLowerCase()===l.bookTitle.trim().toLowerCase());
+    if(!book)return;
+    // Kein doppelter Log-Eintrag
+    const alreadyLogged=state.logs.some(e=>e.bookId===book.id&&e.date===l.date);
+    if(alreadyLogged)return;
+    state.logs.push({id:state.nextId++,date:l.date,bookId:book.id,bookTitle:book.title,pages:l.pages,currentPosition:l.currentPosition,positionType:l.positionType});
+    logsAdded++;
+  });
+
+  await save();refreshAll();
+  alert(`✓ ${toAdd.length} Bücher + ${logsAdded} Log-Einträge importiert.\n${BOOKS.length-toAdd.length} bereits vorhanden und übersprungen.\n\nHinweis: Bitte Singularitäten, Polarisierung, Was wir wissen könnten, Nelio Biedermann Lazar manuell prüfen (Autor/Seiten unbekannt).`);
+};
+// ── End historischer Import Stefan ────────────────────────────────────────
 
 </script>
 </body>
