@@ -665,10 +665,7 @@
     <div class="card"><div class="card-title">Seiten / Jahr</div><div class="chart-wrap"><canvas id="chart-years"></canvas></div></div>
     <div class="card"><div class="card-title">Bücher / Jahr</div><div class="chart-wrap"><canvas id="chart-books-per-year"></canvas></div></div>
   </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem;margin-top:1rem">
-    <div class="section-title" style="margin:0;border:none;padding:0">Kumulativer Fortschritt</div>
-    <div class="filter-row" id="monthly-year-filter"></div>
-  </div>
+  <div class="section-title" style="margin-top:1rem">Kumulativer Fortschritt</div>
   <div class="card" style="margin-bottom:1.2rem"><div class="chart-wrap" style="height:210px"><canvas id="chart-monthly"></canvas></div></div>
   <div class="divider"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.5rem">
@@ -1153,7 +1150,7 @@ function renderLog(){
     const posCell=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':'\u00a0S.'}`:'\u2014';
     const dd=l.date.slice(8,10)+'.'+l.date.slice(5,7)+'.';
     return`<tr>
-    <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:14px">${dd}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:8px;padding-right:4px">${dd}</td>
     <td title="${cap(l.bookTitle)}">${cap(l.bookTitle)}</td>
     <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td>
     <td class="col-pos" style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
@@ -1186,11 +1183,14 @@ function renderTodayStats(){
     if(goal){
       const done=pagesThisYear(yr),dy=doy(today),pace=goal/daysInYear(yr),sh=Math.round(pace*dy),diff=done-sh;
       const sign=diff>=0;
-      const diffStr=(sign?'+':'')+diff.toLocaleString('de')+' S. zum Jahresziel-Soll';
-      const dd=Math.abs(Math.round(diff/pace));
+      const absDiff=Math.abs(diff).toLocaleString('de');
+      const dd=pace>0?Math.abs(Math.round(diff/pace)):0;
       const hypo=new Date(today);hypo.setDate(hypo.getDate()+(sign?dd:-dd));
       const hypoStr=hypo.toLocaleDateString('de-DE',{day:'numeric',month:'long'});
-      pmini.innerHTML=`${diffStr} &nbsp;·&nbsp; liest wie am <strong>${hypoStr}</strong>`;
+      const arrow=sign?'↑':'↓';
+      pmini.innerHTML=sign
+        ?`${arrow} ${absDiff} S. vor Plan &nbsp;·&nbsp; Stand: <strong>${hypoStr}</strong>`
+        :`${arrow} ${absDiff} S. hinter Plan &nbsp;·&nbsp; Stand: <strong>${hypoStr}</strong>`;
       pmini.style.display='block';
       pmini.style.color=sign?'var(--success)':'var(--accent)';
     } else pmini.style.display='none';
@@ -1431,10 +1431,6 @@ function renderYearCharts(){
   if(cc){const all=selCY.size===0;
     cc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleCY('all')">Alle</button>`
       +years.map(y=>`<button class="year-tab ${selCY.has(y)?'active':''}" onclick="toggleCY(${y})">${y}</button>`).join('');}
-  const mc=document.getElementById('monthly-year-filter');
-  if(mc){const none=selMY.size===0;
-    mc.innerHTML=years.map(y=>{const a=none?y===CURRENT_YEAR:selMY.has(y);
-      return`<button class="year-tab ${a?'active':''}" onclick="toggleMY(${y})">${y}</button>`;}).join('');}
   const dY=selCY.size===0?years:years.filter(y=>selCY.has(y));
   const pages=dY.map(y=>pagesThisYear(y)),books=dY.map(y=>state.books.filter(b=>b.year===y&&b.status==='done').length);
   const bc=dY.map(y=>pal[years.indexOf(y)%pal.length]);
@@ -1451,9 +1447,9 @@ function renderYearCharts(){
   charts['books-per-year']=new Chart(document.getElementById('chart-books-per-year').getContext('2d'),{type:'bar',
     data:{labels:dY.map(String),datasets:[{data:books,backgroundColor:bc,borderRadius:3}]},
     options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
-  // Kumulativer Fortschritt nach Monat
+  // Kumulativer Fortschritt nach Monat – nutzt selCY (Jahresvergleich-Filter)
   const months=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-  const mY=selMY.size===0?[CURRENT_YEAR]:years.filter(y=>selMY.has(y));
+  const mY=selCY.size===0?years:years.filter(y=>selCY.has(y));
   const lc=['#c8402a','#b8860b','#4a7c59','#5b7fa6','#9c6b8a'];
   const nowMonth=new Date().getMonth(); // 0-indexed
   const nowYear=new Date().getFullYear();
@@ -1473,7 +1469,7 @@ function renderYearCharts(){
   destroyChart('monthly');
   charts['monthly']=new Chart(document.getElementById('chart-monthly').getContext('2d'),{type:'line',
     data:{labels:months,datasets:mDs},
-    options:{...CD,plugins:{legend:{display:mY.length>1,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
+    options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
       scales:{...CD.scales,
         x:{...CD.scales.x,title:{display:true,text:'Monat',font:{family:'DM Mono',size:9},color:'#7a7060'}},
         y:{...CD.scales.y,beginAtZero:true,title:{display:true,text:'Seiten (kumulativ)',font:{family:'DM Mono',size:9},color:'#7a7060'}}}}});
@@ -2389,9 +2385,10 @@ function renderHeatmap(){
       const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       pages+=pagesByDay[ds]||0;
     }
-    // Future slot
-    const slotEnd=new Date(year,month,Math.min(e,dim));
-    return slotEnd>today?-1:pages;
+    // Future slot: hide only if the slot hasn't started yet
+    const slotStart=new Date(year,month,s);
+    slotStart.setHours(0,0,0,0);
+    return slotStart>today?-1:pages;
   }));
   const maxP=Math.max(1,...data.flat().filter(v=>v>=0));
   const lvl=p=>{
