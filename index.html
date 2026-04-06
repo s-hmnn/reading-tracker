@@ -2833,8 +2833,9 @@ let _gbCache={key:'',vol:null,ts:0};
 async function _fetchGoogleBooks(q){
   const now=Date.now();
   if(_gbCache.key===q&&now-_gbCache.ts<30000)return _gbCache.vol;
-  const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
-  if(res.status===429)return null; // Rate-limit → Fallback
+  const GBOOKS_KEY='AIzaSyDTgPAGKJ6LAB683Pz7_VjeYc3VGtS-ii0';
+  const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&key=${GBOOKS_KEY}`);
+  if(res.status===429){_gbCache={key:q,vol:null,ts:Date.now()};return null;} // cache 429 für 30s
   if(!res.ok)return null;
   const data=await res.json();
   const vol=data?.items?.[0]?.volumeInfo||null;
