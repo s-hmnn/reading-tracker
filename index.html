@@ -348,6 +348,15 @@
   .speed-bar-mini-fill.fastest{background:var(--success);}
   .speed-bar-mini-fill.slowest{background:var(--accent);}
   .speed-insight{margin-top:0.65rem;padding:0.55rem 0.75rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:10px;font-size:0.8rem;line-height:1.55;font-style:italic;color:var(--ink);}
+  /* ── Daily Quote Review ── */
+  #daily-quote-card{background:var(--sky-50);border:1px solid var(--sky-200);border-radius:12px;padding:16px 18px;margin-bottom:1rem;}
+  #daily-quote-card .dq-label{font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--sky-600);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+  #daily-quote-card .dq-counter{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-muted);}
+  #daily-quote-card blockquote{font-family:'Georgia',serif;font-style:italic;font-size:0.92rem;line-height:1.65;color:var(--text-primary);margin:0 0 10px 0;border-left:3px solid var(--sky-300);padding-left:12px;}
+  #daily-quote-card .dq-source{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text-muted);}
+  #daily-quote-card .dq-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+  #daily-quote-card .dq-nav{background:none;border:1px solid var(--sky-300);border-radius:6px;padding:4px 12px;font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--sky-700);cursor:pointer;transition:background 150ms;}
+  #daily-quote-card .dq-nav:hover{background:var(--sky-100);}
   /* ── Login Screen ── */
   #login-screen{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
@@ -552,6 +561,18 @@
       <button class="btn btn-primary" onclick="quickLogYesterday()">Eintragen</button>
     </div>
     <div id="yb-last-pos" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.35rem;min-height:1em"></div>
+  </div>
+  <div id="daily-quote-card" style="display:none;margin-top:0.9rem">
+    <div class="dq-label">
+      <span>✦ Zitat des Tages</span>
+      <span class="dq-counter" id="dq-counter"></span>
+    </div>
+    <blockquote id="dq-text"></blockquote>
+    <div class="dq-source" id="dq-source"></div>
+    <div class="dq-footer">
+      <span></span>
+      <button class="dq-nav" onclick="nextDailyQuote()">Nächstes →</button>
+    </div>
   </div>
   <div class="stats-grid" style="margin-top:0.4rem">
     <div class="card"><div class="card-title">Heute</div><div class="big-number accent" id="stat-today">0</div><div class="sub">Seiten</div></div>
@@ -1172,7 +1193,58 @@ function renderLog(){
   document.getElementById('log-year-label').textContent=`(${logs.length})`;
 }
 
+// ── Daily Quote Review ───────────────────────────────────────
+let _dqQuotes=[], _dqIndex=0;
+
+function getDailyQuotes(){
+  // Alle Zitate aus allen Büchern sammeln
+  const all=[];
+  (state.books||[]).forEach(b=>{
+    (b.quotes||[]).forEach(q=>{
+      if(q&&q.text&&q.text.trim()){
+        all.push({text:q.text.trim(), book:b.title, author:b.author||'', page:q.page||null});
+      }
+    });
+  });
+  if(!all.length) return [];
+  // Geseedeter Zufall nach Datum → täglich dieselben 5
+  const today=todayStr().replace(/-/g,'');
+  let seed=parseInt(today,10);
+  function seededRand(){seed=(seed*1664525+1013904223)&0xffffffff;return Math.abs(seed)/0xffffffff;}
+  const shuffled=[...all];
+  for(let i=shuffled.length-1;i>0;i--){
+    const j=Math.floor(seededRand()*(i+1));
+    [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+  }
+  return shuffled.slice(0,5);
+}
+
+function renderDailyQuotes(){
+  _dqQuotes=getDailyQuotes();
+  _dqIndex=0;
+  showDailyQuote();
+}
+
+function showDailyQuote(){
+  const card=document.getElementById('daily-quote-card');
+  if(!_dqQuotes.length){card.style.display='none';return;}
+  card.style.display='block';
+  const q=_dqQuotes[_dqIndex];
+  document.getElementById('dq-text').textContent=q.text;
+  const src=q.author?`${q.book} · ${q.author}${q.page?' · S. '+q.page:''}`:q.book+(q.page?' · S. '+q.page:'');
+  document.getElementById('dq-source').textContent=src;
+  document.getElementById('dq-counter').textContent=`${_dqIndex+1} / ${_dqQuotes.length}`;
+}
+
+window.nextDailyQuote=function(){
+  if(!_dqQuotes.length)return;
+  _dqIndex=(_dqIndex+1)%_dqQuotes.length;
+  showDailyQuote();
+};
+// ── End Daily Quote Review ───────────────────────────────────
+
 function renderTodayStats(){
+  renderDailyQuotes();
   const today=todayStr(),wa=new Date();wa.setDate(wa.getDate()-7);
   const ws=wa.toISOString().slice(0,10),ms=today.slice(0,7);
   document.getElementById('stat-today').textContent=pagesFromLogs(today)||0;
