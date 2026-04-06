@@ -2645,6 +2645,96 @@ function silentSaveBookDetails(){
   _bmDirty=false;
 }
 
+// ── Einmaliger historischer Import (2020–2022 + Merkliste 2021) ───────────
+// Aufruf einmalig in der Browser-Konsole: _importMatildeHistory()
+window._importMatildeHistory = async function(){
+  const IMPORT = [
+    // ── 2022 gelesen ─────────────────────────────────────────────────────
+    {title:'Margini di errore',author:'Daniele Coen',year:2022,status:'done'},
+    {title:'L\'importante è vincere',author:'Eva Cantarella',year:2022,status:'done'},
+    {title:'Saggio sulla lucidità',author:'José Saramago',year:2022,status:'done'},
+    {title:'Il maialino di Natale',author:'J.K. Rowling',year:2022,status:'done'},
+    {title:'Storia di un fiore',author:'Claudia Casanova',year:2022,status:'done'},
+    {title:'Butcher\'s Crossing',author:'John Edward Williams',year:2022,status:'done'},
+    {title:'The Midnight Library',author:'Matt Haig',year:2022,status:'done'},
+    {title:'4 3 2 1',author:'Paul Auster',year:2022,status:'done'},
+    {title:'Little Women',author:'Louisa May Alcott',year:2022,status:'done'},
+    {title:'Period Power',author:'Maisie Hill',year:2022,status:'done'},
+    {title:'Furore',author:'John Steinbeck',year:2022,status:'done'},
+    {title:'L\'alchimista',author:'Paulo Coelho',year:2022,status:'done'},
+    {title:'Eine Frage der Leidenschaft',author:'Jan Frodeno',year:2022,status:'done'},
+    {title:'Un cappello pieno di ciliegie',author:'Oriana Fallaci',year:2022,status:'done'},
+    {title:'Do hard things',author:'Steve Magness',year:2022,status:'done'},
+    {title:'Il gabbiano Jonathan Livingston',author:'Richard Bach',year:2022,status:'done'},
+    {title:'Le lupe di Pompei',author:'Elodie Harper',year:2022,status:'done'},
+    {title:'L\'uomo che sapeva la lingua dei serpenti',author:'Andrus Kivirahk',year:2022,status:'done'},
+    // ── 2021 gelesen ─────────────────────────────────────────────────────
+    {title:'Circe',author:'Madeleine Miller',year:2021,status:'done'},
+    {title:'D\'amore e d\'ombre',author:'Isabel Allende',year:2021,status:'done'},
+    {title:'Ritratto in Seppia',author:'Isabel Allende',year:2021,status:'done'},
+    {title:'Gente de Sud',author:'Raffaello Mastrolonardo',year:2021,status:'done'},
+    {title:'La banda dei brocchi',author:'Jonathan Coe',year:2021,status:'done'},
+    {title:'Pensieri lenti e veloci',author:'Daniel Kahneman',year:2021,status:'done'},
+    {title:'The most fun we ever had',author:'Claire Lombardo',year:2021,status:'done'},
+    {title:'La voce delle onde',author:'Yukio Mishima',year:2021,status:'done'},
+    {title:'L\'amore rende... rosa',author:'Roxann Hill',year:2021,status:'done'},
+    {title:'La stanza della tessitrice',author:'Cristina Caboni',year:2021,status:'done'},
+    {title:'I pascoli del cielo',author:'John Steinbeck',year:2021,status:'done'},
+    {title:'Narciso e Boccadoro',author:'Herman Hesse',year:2021,status:'done'},
+    {title:'La canzone di Achille',author:'Madeleine Miller',year:2021,status:'done'},
+    {title:'Omero, Iliade',author:'Alessandro Baricco',year:2021,status:'done'},
+    {title:'Nord e Sud',author:'Elizabeth Gaskell',year:2021,status:'done'},
+    {title:'Il circolo chiuso',author:'Jonathan Coe',year:2021,status:'done'},
+    {title:'Girl, Woman, Other',author:'Bernardine Evaristo',year:2021,status:'done'},
+    {title:'Middle England',author:'Jonathan Coe',year:2021,status:'done'},
+    {title:'In the midst of winter',author:'Isabel Allende',year:2021,status:'done'},
+    {title:'Invisible Women',author:'Caroline Criado-Perez',year:2021,status:'done'},
+    {title:'Ariadne',author:'Jennifer Saint',year:2021,status:'done'},
+    {title:'A long petal of the sea',author:'Isabel Allende',year:2021,status:'done'},
+    {title:'Die Parade',author:'Dave Eggers',year:2021,status:'done'},
+    {title:'Er ist wieder da',author:'Timur Vermes',year:2021,status:'done'},
+    {title:'Der erste letzte Tag',author:'Sebastian Fitzek',year:2021,status:'done'},
+    {title:'Das Limit bin nur ich',author:'Jonas Deichmann',year:2021,status:'done'},
+    // ── 2021 Merkliste ───────────────────────────────────────────────────
+    {title:'The Power of Geography',author:'',year:2021,status:'want_to_read'},
+    {title:'Blackout',author:'Marc Elsberg',year:2021,status:'want_to_read'},
+    {title:'Young China',author:'',year:2021,status:'want_to_read'},
+    {title:'Radio Girls',author:'Sarah-Jane Stratford',year:2021,status:'want_to_read'},
+    {title:'Mediocre: The Dangerous Legacy of White Male America',author:'',year:2021,status:'want_to_read'},
+    {title:'The Art of Thinking Clearly',author:'Rolf Dobelli',year:2021,status:'want_to_read'},
+    {title:'Factfulness',author:'Hans Rosling',year:2021,status:'want_to_read'},
+    {title:'Troy',author:'Stephen Fry',year:2021,status:'want_to_read'},
+    {title:'Zeros',author:'',year:2021,status:'want_to_read'},
+    // ── 2020 gelesen ─────────────────────────────────────────────────────
+    {title:'Americanah',author:'Chimamanda Ngozi Adichie',year:2020,status:'done'},
+    {title:'Meine Sommer mit Nora',author:'Linda Yelling',year:2020,status:'done'},
+    {title:'Finché il caffè è caldo',author:'Toshikazu Kawaguchi',year:2020,status:'done'},
+    {title:'They both die at the end',author:'Adam Silvera',year:2020,status:'done'},
+    {title:'La memoria del cuore',author:'Jan-Philipp Sendker',year:2020,status:'done'},
+    {title:'L\'inviata speciale',author:'Jean Echenoz',year:2020,status:'done'},
+    {title:'Tschick',author:'Wolfgang Herrndorf',year:2020,status:'done'},
+    {title:'La famiglia Aubrey',author:'Rebecca West',year:2020,status:'done'},
+    {title:'Figlie di una nuova era',author:'Carmen Korn',year:2020,status:'done'},
+    {title:'Zeiten des Aufbruchs',author:'Carmen Korn',year:2020,status:'done'},
+    {title:'Zeitenwende',author:'Carmen Korn',year:2020,status:'done'},
+    {title:'Find me: A novel',author:'André Aciman',year:2020,status:'done'},
+    {title:'We should all be feminist',author:'Chimamanda Ngozi Adichie',year:2020,status:'done'},
+  ];
+  const existing=new Set(state.books.map(b=>b.title.trim().toLowerCase()));
+  const toAdd=IMPORT.filter(b=>!existing.has(b.title.trim().toLowerCase()));
+  toAdd.forEach(b=>{
+    state.books.push({
+      id:state.nextId++,title:b.title,author:b.author||'',year:b.year,
+      status:b.status,pages:0,format:'',type:'',notes:'',quotes:[],
+      keywords:[],cover_url:'',rating:null,
+      createdAt:new Date(b.year,0,1).toISOString()
+    });
+  });
+  await save();refreshAll();
+  alert(`✓ ${toAdd.length} Bücher importiert.\n${IMPORT.length-toAdd.length} bereits vorhanden und übersprungen.`);
+};
+// ── End historischer Import ────────────────────────────────────────────────
+
 </script>
 </body>
 </html>
