@@ -6,7 +6,7 @@
 const sharp = require('sharp');
 const path = require('path');
 
-const input = path.join(__dirname, 'logo.svg');
+const input = path.join(__dirname, 'logo2.png');
 
 const icons = [
   { output: 'favicon.png',         size: 32  },
