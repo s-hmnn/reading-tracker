@@ -964,7 +964,7 @@ function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Mat
 function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
 function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
 function pagesThisYear(yr){
-  const b=state.books.filter(b=>b.year===yr&&b.status==='done').reduce((s,b)=>s+(b.pages||0),0);
+  const b=state.books.filter(b=>b.year===yr&&b.status==='done'&&!state.logs.some(l=>l.bookId===b.id)).reduce((s,b)=>s+(b.pages||0),0);
   const l=state.logs.filter(l=>l.date.startsWith(String(yr))).reduce((s,l)=>s+l.pages,0);
   return b+l;
 }
@@ -1959,19 +1959,19 @@ function parseKindleHtml(doc) {
   const results = [];
   // Kindle HTML-Export nutzt typischerweise .noteText oder #highlight für Highlight-Texte
   // und .sectionHeading / .noteHeading für Metadaten
-  const headings = doc.querySelectorAll('.noteHeading, [class*="heading"], [class*="Heading"]');
   const noteTexts = doc.querySelectorAll('.noteText, [class*="noteText"], [class*="highlight"]');
 
   if (noteTexts.length === 0) return [];
 
-  noteTexts.forEach((el, i) => {
+  noteTexts.forEach((el) => {
     const txt = el.textContent.trim();
     if (!txt || txt.length < 5) return;
     let page = null;
-    // Seitenzahl aus dem zugehörigen Heading extrahieren
-    if (headings[i]) {
-      const headTxt = headings[i].textContent;
-      const m = headTxt.match(/[Ss]eite\s+(\d+)|[Pp]age\s+(\d+)|[Pp]g\.?\s+(\d+)/);
+    // Seitenzahl aus dem direkt vorangehenden noteHeading im DOM extrahieren
+    let prev = el.previousElementSibling;
+    while (prev && !prev.className.includes('noteHeading')) prev = prev.previousElementSibling;
+    if (prev) {
+      const m = prev.textContent.match(/[Ss]eite\s+(\d+)|[Pp]age\s+(\d+)|[Pp]g\.?\s+(\d+)/);
       if (m) page = parseInt(m[1] || m[2] || m[3]);
     }
     results.push(page ? {text: txt, page} : {text: txt});
