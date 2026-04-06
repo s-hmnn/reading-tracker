@@ -18,6 +18,7 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js';
 
   // ─────────────────────────────────────────────────────
   // 🔧 SCHRITT 1: DEINE FIREBASE CONFIG HIER EINFÜGEN
@@ -162,6 +163,20 @@
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-error').textContent = '';
+  };
+
+  const functions = getFunctions(app, 'europe-west1');
+
+  window.submitFeedback = async function(){
+    const text=document.getElementById('feedback-text').value.trim();
+    if(!text){window.toast('Bitte Feedback eingeben','error');return;}
+    try{
+      await httpsCallable(functions,'sendFeedback')({text});
+      document.getElementById('feedback-modal').style.display='none';
+      window.toast('Danke für dein Feedback! ✓','success');
+    }catch(err){
+      window.toast('Fehler beim Senden','error');
+    }
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -370,6 +385,8 @@
   /* ── Logout Button ── */
   .btn-logout{background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;color:var(--text-secondary);padding:6px 12px;border-radius:6px;transition:background 150ms,color 150ms;}
   .btn-logout:hover{background:var(--sky-50);color:var(--sky-700);}
+  .btn-feedback{background:none;border:none;cursor:pointer;font-size:16px;padding:6px 8px;border-radius:6px;line-height:1;transition:background 150ms;}
+  .btn-feedback:hover{background:var(--sky-50);}
   /* ── Knowledge Base ── */
   .kb-layout{display:flex;min-height:calc(100vh - 56px - 96px);border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);}
   .kb-sidebar{width:300px;flex-shrink:0;background:var(--slate-50);border-right:1px solid var(--border);display:flex;flex-direction:column;}
@@ -542,6 +559,7 @@
     <div id="sync-status"></div>
     <div id="header-date" style="display:none"></div>
     <div id="header-year" style="display:none"></div>
+    <button class="btn-feedback" onclick="openFeedback()" title="Feedback senden">💬</button>
     <button class="btn-logout" onclick="signOutUser()">Abmelden</button>
   </div>
 </header>
@@ -570,7 +588,7 @@
     <blockquote id="dq-text"></blockquote>
     <div class="dq-source" id="dq-source"></div>
     <div class="dq-footer">
-      <span></span>
+      <button class="dq-nav" id="dq-prev" onclick="prevDailyQuote()" style="visibility:hidden">← Zurück</button>
       <button class="dq-nav" onclick="nextDailyQuote()">Nächstes →</button>
     </div>
   </div>
@@ -874,6 +892,15 @@
         </div>
       </div>
       <div class="bm-field">
+        <label class="bm-label">Sprache</label>
+        <input type="text" id="bm-language" class="bm-input" list="bm-language-list" placeholder="z.B. Deutsch">
+        <datalist id="bm-language-list">
+          <option value="Deutsch">
+          <option value="Englisch">
+          <option value="Italienisch">
+        </datalist>
+      </div>
+      <div class="bm-field">
         <label class="bm-label">Quelle / Empfehlung</label>
         <input type="text" id="bm-source" class="bm-input" placeholder="z.B. Empfehlung, Zeitungsartikel…">
       </div>
@@ -970,6 +997,22 @@
         <button class="btn btn-outline btn-sm" onclick="closeKindleImport()">Abbrechen</button>
         <button class="btn btn-primary btn-sm" onclick="importKindleHighlights()">Importieren</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div id="feedback-modal" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:200;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease" onclick="closeFeedback(event)">
+  <div onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem">
+      <div style="font-family:'Inter',sans-serif;font-weight:600;font-size:1rem">Feedback & Ideen</div>
+      <button class="btn btn-outline btn-sm" onclick="closeFeedback()">✕</button>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin:0 0 0.9rem;line-height:1.5">Was kann verbessert werden? Ideen, Bugs, Wünsche – alles willkommen.</p>
+    <textarea id="feedback-text" class="bm-input" rows="5" style="width:100%;resize:vertical;box-sizing:border-box" placeholder="Dein Feedback…"></textarea>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
+      <button class="btn btn-outline btn-sm" onclick="closeFeedback()">Abbrechen</button>
+      <button class="btn btn-primary btn-sm" onclick="submitFeedback()">Senden</button>
     </div>
   </div>
 </div>
@@ -1216,7 +1259,7 @@ function getDailyQuotes(){
     const j=Math.floor(seededRand()*(i+1));
     [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
   }
-  return shuffled.slice(0,5);
+  return shuffled.slice(0,3);
 }
 
 function renderDailyQuotes(){
@@ -1234,11 +1277,18 @@ function showDailyQuote(){
   const src=q.author?`${q.book} · ${q.author}${q.page?' · S. '+q.page:''}`:q.book+(q.page?' · S. '+q.page:'');
   document.getElementById('dq-source').textContent=src;
   document.getElementById('dq-counter').textContent=`${_dqIndex+1} / ${_dqQuotes.length}`;
+  const prev=document.getElementById('dq-prev');
+  if(prev) prev.style.visibility=_dqIndex===0?'hidden':'visible';
 }
 
 window.nextDailyQuote=function(){
   if(!_dqQuotes.length)return;
   _dqIndex=(_dqIndex+1)%_dqQuotes.length;
+  showDailyQuote();
+};
+window.prevDailyQuote=function(){
+  if(!_dqQuotes.length)return;
+  _dqIndex=(_dqIndex-1+_dqQuotes.length)%_dqQuotes.length;
   showDailyQuote();
 };
 // ── End Daily Quote Review ───────────────────────────────────
@@ -1772,7 +1822,7 @@ function openBookModal(id){
   _bmKeywords=[...(b.keywords||[])];
   _bmQuotes=[...(b.quotes||[])];
   document.getElementById('bm-title').textContent=isNew?'Neues Buch':cap(b.title);
-  document.getElementById('bm-meta').textContent=isNew?'':[b.author,b.format,b.type,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
+  document.getElementById('bm-meta').textContent=isNew?'':[b.author,b.format,b.type,b.language,b.pages?b.pages+' S.':'',b.year].filter(Boolean).join(' · ');
   // Cover
   const coverThumb=document.getElementById('bm-cover-thumb');
   if(coverThumb){if(b.cover_url){coverThumb.src=b.cover_url;coverThumb.style.display='block';}else coverThumb.style.display='none';}
@@ -1784,6 +1834,7 @@ function openBookModal(id){
   document.getElementById('bm-edit-pages').value=b.pages||'';
   document.getElementById('bm-edit-year').value=b.year||'';
   document.getElementById('bm-source').value=b.source||'';
+  document.getElementById('bm-language').value=b.language||'';
   document.getElementById('bm-cover-url').value=b.cover_url||'';
   document.getElementById('bm-notes').value=b.notes||'';
   document.getElementById('bm-ai-summary').innerHTML=b.aiSummary?renderAiSummaryHTML(b.aiSummary):'';
@@ -1855,6 +1906,7 @@ async function saveBookDetails(){
       status:'want_to_read',
       createdAt:new Date().toISOString(),
       source:document.getElementById('bm-source').value.trim(),
+      language:document.getElementById('bm-language').value.trim(),
       notes:document.getElementById('bm-notes').value.trim(),
       rating:_bmRating,
       keywords:[..._bmKeywords],
@@ -1879,6 +1931,7 @@ async function saveBookDetails(){
     b.pages=parseInt(document.getElementById('bm-edit-pages').value)||b.pages;
     b.year=parseInt(document.getElementById('bm-edit-year').value)||b.year;
     b.source=document.getElementById('bm-source').value.trim();
+    b.language=document.getElementById('bm-language').value.trim();
     b.notes=document.getElementById('bm-notes').value.trim();
     b.rating=_bmRating;
     b.keywords=[..._bmKeywords];
@@ -2007,6 +2060,15 @@ function deleteAllQuotes(){if(!_bmQuotes.length)return;if(!confirm(`Alle ${_bmQu
 
 // ── Kindle Import ────────────────────────────────────────
 let _kindleParsed = [];
+
+function openFeedback(){
+  document.getElementById('feedback-text').value='';
+  document.getElementById('feedback-modal').style.display='flex';
+}
+function closeFeedback(e){
+  if(e&&e.target!==document.getElementById('feedback-modal'))return;
+  document.getElementById('feedback-modal').style.display='none';
+}
 
 function openKindleImport() {
   const modal = document.getElementById('kindle-modal');
@@ -2789,6 +2851,7 @@ function silentSaveBookDetails(){
   const p=parseInt(document.getElementById('bm-edit-pages')?.value);if(p)b.pages=p;
   const y=parseInt(document.getElementById('bm-edit-year')?.value);if(y)b.year=y;
   b.source=document.getElementById('bm-source')?.value.trim()||b.source;
+  b.language=document.getElementById('bm-language')?.value.trim()||b.language;
   b.notes=document.getElementById('bm-notes')?.value.trim()||b.notes;
   b.cover_url=document.getElementById('bm-cover-url')?.value.trim()||b.cover_url;
   b.rating=_bmRating;b.keywords=[..._bmKeywords];b.quotes=[..._bmQuotes];

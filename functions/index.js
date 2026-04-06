@@ -3,10 +3,41 @@ const { defineSecret } = require("firebase-functions/params");
 const { getDatabase } = require("firebase-admin/database");
 const { initializeApp } = require("firebase-admin/app");
 const Anthropic = require("@anthropic-ai/sdk");
+const nodemailer = require("nodemailer");
 
 initializeApp();
 
 const ANTHROPIC_KEY = defineSecret("ANTHROPIC_API_KEY");
+const GMAIL_USER = defineSecret("GMAIL_USER");
+const GMAIL_PASS = defineSecret("GMAIL_APP_PASSWORD");
+
+exports.sendFeedback = onCall(
+  { secrets: [GMAIL_USER, GMAIL_PASS], region: "europe-west1" },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "Login required");
+    const { text } = request.data;
+    if (!text?.trim()) throw new HttpsError("invalid-argument", "Empty feedback");
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER.value(), pass: GMAIL_PASS.value() },
+    });
+    await transporter.sendMail({
+      from: GMAIL_USER.value(),
+      to: "stefan.a.hartmann@gmail.com",
+      subject: "Crescendo Feedback",
+      text: `Von: ${request.auth.token.email}\n\n${text}`,
+    });
+
+    const db = getDatabase();
+    await db.ref(`feedback/${Date.now()}`).set({
+      text,
+      user: request.auth.token.email,
+      ts: new Date().toISOString(),
+    });
+    return { ok: true };
+  }
+);
 
 exports.generateBookSummary = onCall(
   { secrets: [ANTHROPIC_KEY], region: "europe-west1" },
