@@ -2900,12 +2900,12 @@ async function fetchMissingCovers(){
 }
 async function lookupBookMetadata(){
   const title=document.getElementById('bm-edit-title').value.trim();
-  if(!title){toast('Titel eingeben','error');return;}
+  const isbn=document.getElementById('bm-isbn').value.trim();
+  if(!isbn&&!title){toast('Titel oder ISBN eingeben','error');return;}
   const author=document.getElementById('bm-edit-author').value.trim();
   const btn=document.getElementById('bm-lookup-btn');
   btn.disabled=true;btn.textContent='⏳ Suche…';
   try{
-    const isbn=document.getElementById('bm-isbn').value.trim();
     let q;
     if(isbn) q='isbn:'+isbn.replace(/[-\s]/g,'');
     else q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
