@@ -450,24 +450,21 @@
   #bm-author-dd{position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--card);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:140px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
   #bm-author-dd div{padding:0.42rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.78rem;cursor:pointer;}
   #bm-author-dd div:hover,#bm-author-dd div.aa-active{background:var(--sky-light);}
-  /* ── Heatmap ── */
-  .heatmap-outer{overflow-x:auto;padding-bottom:0.3rem;margin-bottom:0.2rem;}
-  .heatmap-inner{display:inline-flex;gap:0;min-width:100%;}
-  .heatmap-days-col{display:flex;flex-direction:column;justify-content:space-between;gap:2px;padding-top:16px;margin-right:4px;}
-  .heatmap-day-lbl{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);height:11px;line-height:11px;}
-  .heatmap-weeks{display:flex;gap:2px;}
-  .heatmap-week{display:flex;flex-direction:column;gap:2px;}
-  .heatmap-month-row{height:14px;font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);display:flex;gap:2px;}
-  .heatmap-month-lbl{width:11px;text-align:center;overflow:visible;white-space:nowrap;}
+  /* ── Heatmap (weekly grid: columns=months, rows=weeks) ── */
   .hm-cell{width:11px;height:11px;border-radius:2px;background:var(--slate-100);cursor:default;}
   .hm-cell.l1{background:#bae6fd;}.hm-cell.l2{background:#38bdf8;}.hm-cell.l3{background:#0ea5e9;}.hm-cell.l4{background:#0369a1;}
-  /* Heatmap portrait (mobile) */
-  .hmp-landscape{display:block;}.hmp-portrait{display:none;}
-  @media(max-width:639px){.hmp-landscape{display:none;}.hmp-portrait{display:block;}.heatmap-outer{overflow-x:visible;}}
-  .hmp-day-header{display:flex;gap:2px;margin-bottom:3px;padding-left:32px;}
-  .hmp-day-header span{width:11px;text-align:center;font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);}
-  .hmp-week-row{display:flex;gap:2px;margin-bottom:2px;align-items:center;}
-  .hmp-month-label{width:28px;font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;}
+  .hm-week-grid{display:inline-flex;flex-direction:column;gap:2px;width:100%;}
+  .hm-month-lbl-row{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;height:14px;}
+  .hm-month-lbl-cell{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);text-align:center;overflow:visible;white-space:nowrap;}
+  .hm-week-grid-row{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;}
+  .hm-week-grid-row .hm-cell{width:auto;}
+  /* ── iOS zoom prevention (font-size < 16px triggers auto-zoom on focus) ── */
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+  /* ── Book title overflow fix ── */
+  .book-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  @media(max-width:479px){.book-year-badge{display:none;}}
   /* ── Drag handle (modal) ── */
   .bm-drag-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 0.9rem;cursor:grab;}
   /* ── Goal progress on books tab ── */
@@ -514,13 +511,13 @@
 
 <div id="app" style="display:none">
 <header id="topbar">
-  <div id="topbar-logo">Crescendo</div>
+  <div id="topbar-logo" onclick="switchTabExtra('today')" style="cursor:pointer" title="Zur Startseite">Crescendo</div>
   <nav id="topbar-nav">
-    <button class="active" onclick="switchTab('today',this)">Tages-Log</button>
-    <button onclick="switchTab('goal',this)">Jahres-Tracker</button>
-    <button onclick="switchTab('books',this)">Bibliothek</button>
+    <button class="active" onclick="switchTab('today',this)">Heute</button>
+    <button onclick="switchTab('goal',this)">Ziel</button>
+    <button onclick="switchTab('books',this)">Bücher</button>
     <button onclick="switchTab('stats',this)">Statistiken</button>
-    <button onclick="switchTab('kb',this)">Knowledge Base</button>
+    <button onclick="switchTab('kb',this)">Wissen</button>
   </nav>
   <div id="topbar-right">
     <div id="sync-status"></div>
@@ -546,30 +543,19 @@
     </div>
     <div id="yb-last-pos" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.35rem;min-height:1em"></div>
   </div>
-  <div class="section-title" style="margin-top:0.4rem">Heute lesen</div>
-  <div class="card-sky" style="margin-bottom:1.1rem">
-    <div class="card-title">Eintrag hinzufügen</div>
-    <div class="input-row">
-      <input type="date" id="log-date" style="max-width:145px">
-      <select id="log-book" style="flex:2" onchange="onLogBookChange()"></select>
-      <button id="pos-toggle" class="btn btn-sky btn-sm" onclick="togglePositionMode()" style="flex-shrink:0;min-width:52px" title="Seite / Prozent">Seite</button>
-      <input type="number" inputmode="numeric" id="log-pages" min="0" max="9999" step="1" placeholder="Seite" style="max-width:85px">
-      <button class="btn btn-primary" onclick="addEntry()">+ Eintragen</button>
-    </div>
-    <div id="log-last-pos" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.35rem;min-height:1em"></div>
-  </div>
-  <div class="stats-grid">
+  <div class="stats-grid" style="margin-top:0.4rem">
     <div class="card"><div class="card-title">Heute</div><div class="big-number accent" id="stat-today">0</div><div class="sub">Seiten</div></div>
     <div class="card"><div class="card-title">Woche</div><div class="big-number" id="stat-week">0</div><div class="sub">Seiten</div></div>
     <div class="card"><div class="card-title">Monat</div><div class="big-number gold" id="stat-month">0</div><div class="sub">Seiten</div></div>
     <div class="card"><div class="card-title">Ø/Tag</div><div class="big-number sky" id="stat-avg">0</div><div class="sub">dieses Jahr</div></div>
   </div>
+  <div id="pacing-mini" style="display:none;font-family:'DM Mono',monospace;font-size:0.72rem;text-align:center;margin:0.5rem 0 0.25rem;padding:0.4rem 0.85rem;border-radius:8px;background:var(--card);border:1px solid var(--border)"></div>
   <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
   <div class="card" style="padding-left:0;padding-right:0">
     <div class="log-table-wrap">
     <table class="log-table">
       <colgroup>
-        <col style="width:88px">
+        <col style="width:54px">
         <col>
         <col style="width:62px">
         <col class="col-pos" style="width:68px">
@@ -627,7 +613,7 @@
   <div class="card" style="padding-left:0;padding-right:0">
     <div class="log-table-wrap">
     <table class="log-table">
-      <colgroup><col style="width:60px"><col><col><col style="width:52px"></colgroup>
+      <colgroup><col style="width:60px"><col><col><col style="width:70px"></colgroup>
       <thead><tr><th style="padding-left:14px">Jahr</th><th>Ziel</th><th>Erreicht</th><th>%</th></tr></thead>
       <tbody id="goals-history-body"></tbody>
     </table>
@@ -1029,7 +1015,7 @@ function onLogBookChange(){
 function updateLastPosHint(){
   const sel=document.getElementById('log-book');
   const hint=document.getElementById('log-last-pos');
-  if(!hint)return;
+  if(!sel||!hint)return;
   const bookId=sel?parseInt(sel.value):NaN;
   if(!bookId||isNaN(bookId)){hint.textContent='';return;}
   const last=getLastPosition(bookId);
@@ -1040,16 +1026,11 @@ function updateLastPosHint(){
 }
 
 function populateBookSelect(){
-  const sel=document.getElementById('log-book');
   const books=state.books.filter(b=>b.status!=='done').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
-  if(!books.length){sel.innerHTML='<option value="">– Kein aktives Buch –</option>';return;}
-  sel.innerHTML=books.map(b=>`<option value="${b.id}">${cap(b.title)}${b.status==='want_to_read'?' ★':''}</option>`).join('');
-  // Default: last logged book
+  const opts=books.length?books.map(b=>`<option value="${b.id}">${cap(b.title)}${b.status==='want_to_read'?' ★':''}</option>`).join(''):'<option value="">– Kein aktives Buch –</option>';
   const lastLog=state.logs.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id)[0];
-  if(lastLog){const o=sel.querySelector(`option[value="${lastLog.bookId}"]`);if(o)o.selected=true;}
-  // Banner-Dropdown synchron befüllen
-  const yb=document.getElementById('yb-book');
-  if(yb)yb.innerHTML=sel.innerHTML;
+  const setSelect=id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML=opts;if(lastLog){const o=s.querySelector(`option[value="${lastLog.bookId}"]`);if(o)o.selected=true;}};
+  setSelect('log-book');setSelect('yb-book');
   updateLastPosHint();
 }
 
@@ -1084,13 +1065,9 @@ function checkYesterdayBanner(){
   const hasEntry=state.logs.some(l=>l.date===yest);
   banner.style.display=hasEntry?'none':'block';
   if(!hasEntry){
+    populateBookSelect();
     const yb=document.getElementById('yb-book');
-    if(yb){
-      const sel=document.getElementById('log-book');
-      if(sel)yb.innerHTML=sel.innerHTML;
-      yb.onchange=updateYbHint;
-      updateYbHint();
-    }
+    if(yb){yb.onchange=updateYbHint;updateYbHint();}
   }
 }
 function dismissYesterdayBanner(){
@@ -1100,31 +1077,36 @@ function dismissYesterdayBanner(){
 }
 function quickLogYesterday(){
   const bookId=parseInt(document.getElementById('yb-book').value);
-  const val=parseFloat(document.getElementById('yb-pages').value);
+  const rawVal=parseFloat(document.getElementById('yb-pages').value);
   if(!bookId||isNaN(bookId)){toast('Buch wählen');return;}
-  if(!val||val<=0){toast('Seite / % eingeben');return;}
-  // Temporarily set main form values and call addEntry
-  const dateEl=document.getElementById('log-date');
-  const bookEl=document.getElementById('log-book');
-  const pagesEl=document.getElementById('log-pages');
-  const prevDate=dateEl.value,prevBook=bookEl.value,prevPages=pagesEl.value;
-  dateEl.value=yesterdayStr();
-  bookEl.value=bookId;
-  pagesEl.value=val;
-  if(_ybMode!==positionMode)togglePositionMode();
-  addEntry();
-  // Restore main form
-  dateEl.value=prevDate;
-  bookEl.value=prevBook;
-  pagesEl.value=prevPages;
+  if(!rawVal||rawVal<=0){toast('Seite / % eingeben');return;}
+  const date=yesterdayStr();
+  const book=state.books.find(b=>b.id===bookId);
+  const last=getLastPosition(bookId);
+  let pages,currentPosition,positionType;
+  if(_ybMode==='percent'){
+    positionType='percent';currentPosition=Math.min(100,Math.max(0,rawVal));
+    const prev=last&&last.type==='percent'?last.position:0;
+    pages=Math.max(0,Math.round((currentPosition-prev)/100*(book?.pages||100)));
+  } else {
+    positionType='page';currentPosition=rawVal;
+    const prev=last&&last.type==='page'?last.position:0;
+    pages=Math.max(0,currentPosition-prev);
+  }
+  if(book&&book.status==='want_to_read')book.status='reading';
+  state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?.title||'',pages,currentPosition,positionType});
+  save();toast('Gestern eingetragen ✓','success');
   document.getElementById('yesterday-banner').style.display='none';
+  refreshAll();
 }
 // ── End Yesterday Banner ─────────────────────────────────
 
 function addEntry(){
-  const date=document.getElementById('log-date').value;
-  const bookId=parseInt(document.getElementById('log-book').value);
-  const inputVal=parseFloat(document.getElementById('log-pages').value);
+  const dateEl=document.getElementById('log-date'),bookEl=document.getElementById('log-book'),pagesEl=document.getElementById('log-pages');
+  if(!dateEl||!bookEl||!pagesEl){return;}
+  const date=dateEl.value;
+  const bookId=parseInt(bookEl.value);
+  const inputVal=parseFloat(pagesEl.value);
   if(!date||isNaN(inputVal)||inputVal<0){toast('Datum und Position angeben!');return;}
   const book=state.books.find(b=>b.id===bookId);
   const last=getLastPosition(bookId);
@@ -1146,27 +1128,36 @@ function addEntry(){
   if(book&&book.status==='want_to_read'){book.status='reading';}
   state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages:deltaPages,currentPosition,positionType});
   save();
-  document.getElementById('log-pages').value='';
+  const _lp=document.getElementById('log-pages');if(_lp)_lp.value='';
   updateLastPosHint();
   toast(`+${deltaPages} Seiten ✓`);
   refreshAll();
 }
 
 function deleteEntry(id){state.logs=state.logs.filter(l=>l.id!==id);save();renderLog();renderTodayStats();}
+function deleteEntriesByDateBook(date,bookId){state.logs=state.logs.filter(l=>!(l.date===date&&l.bookId===bookId));save();renderLog();renderTodayStats();}
 
 function renderLog(){
   const tbody=document.getElementById('log-body'),empty=document.getElementById('log-empty');
-  const logs=[...state.logs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,60);
+  // Merge same-day + same-book entries (sum pages, keep latest position)
+  const mergedMap={};
+  [...state.logs].sort((a,b)=>a.date.localeCompare(b.date)||(a.id-b.id)).forEach(l=>{
+    const key=`${l.date}|${l.bookId}`;
+    if(!mergedMap[key]){mergedMap[key]={...l};}
+    else{mergedMap[key].pages=(mergedMap[key].pages||0)+(l.pages||0);mergedMap[key].currentPosition=l.currentPosition;mergedMap[key].positionType=l.positionType;}
+  });
+  const logs=Object.values(mergedMap).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
   if(!logs.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   tbody.innerHTML=logs.map(l=>{
     const posCell=l.currentPosition!=null?`${l.currentPosition}${l.positionType==='percent'?'%':'\u00a0S.'}`:'\u2014';
+    const dd=l.date.slice(8,10)+'.'+l.date.slice(5,7)+'.';
     return`<tr>
-    <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:14px">${l.date}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:14px">${dd}</td>
     <td title="${cap(l.bookTitle)}">${cap(l.bookTitle)}</td>
     <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages}</td>
     <td class="col-pos" style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
-    <td style="padding-right:14px"><button class="delete-btn" onclick="deleteEntry(${l.id})">×</button></td>
+    <td style="padding-right:14px"><button class="delete-btn" onclick="deleteEntriesByDateBook('${l.date}',${l.bookId})">×</button></td>
   </tr>`;}).join('');
   document.getElementById('log-year-label').textContent=`(${logs.length})`;
 }
@@ -1188,6 +1179,19 @@ function renderTodayStats(){
     document.querySelector('.stats-grid')?.after(streakEl);
   }
   streakEl.textContent=streak>1?`🔥 ${streak} Tage in Folge`:'';
+  // Mini pacing widget
+  const pmini=document.getElementById('pacing-mini');
+  if(pmini){
+    const yr=CURRENT_YEAR,goal=state.goals[yr]||0;
+    if(goal){
+      const done=pagesThisYear(yr),dy=doy(today),pace=goal/daysInYear(yr),sh=Math.round(pace*dy),diff=done-sh;
+      const sign=diff>=0;
+      const diffStr=(sign?'+':'')+diff.toLocaleString('de')+' S.';
+      pmini.textContent=diffStr+' '+(sign?'vor dem Tagesziel':'hinter dem Tagesziel');
+      pmini.style.display='block';
+      pmini.style.color=sign?'var(--success)':'var(--accent)';
+    } else pmini.style.display='none';
+  }
 }
 
 function saveGoal(){
@@ -2305,7 +2309,7 @@ window.initApp=function(){
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('header-year').textContent=CURRENT_YEAR;
-  document.getElementById('log-date').value=yesterdayStr();
+  const _logDate=document.getElementById('log-date');if(_logDate)_logDate.value=yesterdayStr();
   populateBookSelect();updateLastPosHint();refreshAll();
 };
 
@@ -2332,7 +2336,7 @@ window.addEventListener('online',()=>{
 });
 
 // ── Browser title map ─────────────────────────────────────
-const TAB_TITLES={today:'Crescendo · Tages-Log',goal:'Crescendo · Jahres-Tracker',books:'Crescendo · Bibliothek',stats:'Crescendo · Statistiken',kb:'Crescendo · Knowledge Base'};
+const TAB_TITLES={today:'Crescendo · Heute',goal:'Crescendo · Ziel',books:'Crescendo · Bücher',stats:'Crescendo · Statistiken',kb:'Crescendo · Wissen'};
 function switchTabExtra(tab){
   const topBtn=document.querySelector(`#topbar-nav button[onclick*="'${tab}'"]`);
   switchTab(tab,topBtn);
@@ -2354,64 +2358,64 @@ function calcStreak(){
   return streak;
 }
 
-// ── Heatmap ───────────────────────────────────────────────
+// ── Heatmap (weekly grid: columns=months, rows=week-slots) ───────────────
 function renderHeatmap(){
   const container=document.getElementById('heatmap-container');
   if(!container)return;
   const pagesByDay={};
   state.logs.forEach(l=>{if(l.date)pagesByDay[l.date]=(pagesByDay[l.date]||0)+(l.pages||0);});
-  const maxP=Math.max(1,...Object.values(pagesByDay));
-  const today=new Date();
-  const weeks=53;
-  const start=new Date(today);
-  start.setDate(start.getDate()-start.getDay()-((weeks-1)*7));
   const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-  const DAY_LABELS=['','Mo','','Mi','','Fr',''];
-  // ── Landscape (desktop) ──────────────────────────────────
-  let weeksHTML='';
-  let monthLabels=new Array(weeks).fill('');
-  for(let w=0;w<weeks;w++){
-    let weekHTML='';
-    for(let d=0;d<7;d++){
-      const date=new Date(start);
-      date.setDate(start.getDate()+w*7+d);
-      if(date>today){weekHTML+='<div class="hm-cell"></div>';continue;}
-      const ds=date.toISOString().slice(0,10);
-      const p=pagesByDay[ds]||0;
-      const lvl=p===0?'':p<maxP*0.25?'l1':p<maxP*0.5?'l2':p<maxP*0.75?'l3':'l4';
-      const mo=date.getDate()===1?MONTHS[date.getMonth()]:'';
-      if(mo)monthLabels[w]=mo;
-      weekHTML+=`<div class="hm-cell ${lvl}" title="${ds}: ${p} Seiten"></div>`;
-    }
-    weeksHTML+=`<div class="heatmap-week">${weekHTML}</div>`;
+  // Week slots within a month: days 1-7, 8-14, 15-21, 22-28, 29-end
+  const SLOTS=[[1,7],[8,14],[15,21],[22,28],[29,31]];
+  const today=new Date();
+  // Build last 12 calendar months
+  const months=[];
+  for(let i=11;i>=0;i--){
+    const d=new Date(today.getFullYear(),today.getMonth()-i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth()});
   }
-  const monthRow='<div class="heatmap-month-row">'+monthLabels.map(m=>`<div class="heatmap-month-lbl">${m}</div>`).join('')+'</div>';
-  const dayLabels='<div class="heatmap-days-col">'+DAY_LABELS.map(l=>`<div class="heatmap-day-lbl">${l}</div>`).join('')+'</div>';
-  const landscapeHTML=`<div class="heatmap-outer"><div class="heatmap-inner">${dayLabels}<div>${monthRow}<div class="heatmap-weeks">${weeksHTML}</div></div></div></div>`;
-  // ── Portrait (mobile) ────────────────────────────────────
-  let portraitHTML='<div class="hmp-day-header">'
-    +['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<span>${d}</span>`).join('')
-    +'</div>';
-  for(let w=0;w<weeks;w++){
-    let monthLabel='';
-    for(let d=0;d<7;d++){
-      const date=new Date(start);date.setDate(start.getDate()+w*7+d);
-      if(date.getDate()===1)monthLabel=MONTHS[date.getMonth()];
+  // Aggregate pages per (month, slot)
+  const data=months.map(({year,month})=>SLOTS.map(([s,e])=>{
+    const dim=new Date(year,month+1,0).getDate();
+    if(s>dim)return -2; // slot doesn't exist in this month
+    let pages=0;
+    for(let d=s;d<=Math.min(e,dim);d++){
+      const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      pages+=pagesByDay[ds]||0;
     }
-    portraitHTML+=`<div class="hmp-week-row"><div class="hmp-month-label">${monthLabel}</div>`;
-    // Portrait: columns = Mon(d=1)..Sun(d=0), rows = weeks
-    for(let d=1;d<=7;d++){
-      const di=d%7; // 1→Mon,2→Tue,...,6→Sat,0→Sun
-      const date=new Date(start);date.setDate(start.getDate()+w*7+di);
-      if(date>today){portraitHTML+='<div class="hm-cell"></div>';continue;}
-      const ds=date.toISOString().slice(0,10);
-      const p=pagesByDay[ds]||0;
-      const lvl=p===0?'':p<maxP*0.25?'l1':p<maxP*0.5?'l2':p<maxP*0.75?'l3':'l4';
-      portraitHTML+=`<div class="hm-cell ${lvl}" title="${ds}: ${p} Seiten"></div>`;
-    }
-    portraitHTML+='</div>';
+    // Future slot
+    const slotEnd=new Date(year,month,Math.min(e,dim));
+    return slotEnd>today?-1:pages;
+  }));
+  const maxP=Math.max(1,...data.flat().filter(v=>v>=0));
+  const lvl=p=>{
+    if(p<0)return''; // future or non-existent
+    if(p===0)return'';
+    if(p<maxP*0.25)return'l1';
+    if(p<maxP*0.5)return'l2';
+    if(p<maxP*0.75)return'l3';
+    return'l4';
+  };
+  // Month label row
+  const monthRow='<div class="hm-month-lbl-row">'+months.map(({month})=>`<div class="hm-month-lbl-cell">${MONTHS[month]}</div>`).join('')+'</div>';
+  // 5 week-slot rows
+  let rows='';
+  for(let w=0;w<5;w++){
+    rows+='<div class="hm-week-grid-row">';
+    months.forEach(({year,month},mi)=>{
+      const [s,e]=SLOTS[w];
+      const dim=new Date(year,month+1,0).getDate();
+      const pages=data[mi][w];
+      if(pages===-2){rows+='<div class="hm-cell"></div>';return;}
+      const l=lvl(pages);
+      const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(s).padStart(2,'0')}`;
+      const ds2=`${year}-${String(month+1).padStart(2,'0')}-${String(Math.min(e,dim)).padStart(2,'0')}`;
+      const tip=pages<0?'':pages===0?`${ds}: keine Seiten`:`${ds}–${ds2}: ${pages} S.`;
+      rows+=`<div class="hm-cell ${l}" title="${tip}"></div>`;
+    });
+    rows+='</div>';
   }
-  container.innerHTML=`<div class="hmp-landscape">${landscapeHTML}</div><div class="hmp-portrait">${portraitHTML}</div>`;
+  container.innerHTML=`<div class="hm-week-grid">${monthRow}${rows}</div>`;
 }
 
 // ── Grid view toggle ──────────────────────────────────────
