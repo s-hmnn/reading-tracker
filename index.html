@@ -863,6 +863,9 @@
           <div id="bm-author-dd" style="display:none"></div>
         </div>
       </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:-0.2rem;margin-bottom:0.2rem">
+        <button type="button" class="btn btn-outline btn-sm" onclick="lookupBookMetadata()" id="bm-lookup-btn" title="Metadaten automatisch aus Google Books laden">🔍 Buch suchen</button>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div class="bm-field">
           <label class="bm-label">Format</label>
@@ -2884,6 +2887,82 @@ async function fetchMissingCovers(){
   }
   save();renderBooks();
   toast(`${count} von ${missing.length} Cover geladen ✓`,'success');
+}
+async function lookupBookMetadata(){
+  const title=document.getElementById('bm-edit-title').value.trim();
+  if(!title){toast('Titel eingeben','error');return;}
+  const author=document.getElementById('bm-edit-author').value.trim();
+  const btn=document.getElementById('bm-lookup-btn');
+  btn.disabled=true;btn.textContent='⏳ Suche…';
+  try{
+    const isbn=document.getElementById('bm-isbn').value.trim();
+    let q;
+    if(isbn){
+      q='isbn:'+isbn.replace(/[-\s]/g,'');
+    }else{
+      q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
+    }
+    const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    const data=await res.json();
+    const vol=data?.items?.[0]?.volumeInfo;
+    if(!vol){toast('Kein Eintrag gefunden','error');return;}
+    const filled=[];
+    // ISBN
+    if(!document.getElementById('bm-isbn').value.trim()){
+      const isbn13=(vol.industryIdentifiers||[]).find(i=>i.type==='ISBN_13');
+      const isbn10=(vol.industryIdentifiers||[]).find(i=>i.type==='ISBN_10');
+      const isbnVal=(isbn13||isbn10)?.identifier||'';
+      if(isbnVal){document.getElementById('bm-isbn').value=isbnVal;filled.push('ISBN');}
+    }
+    // Autor
+    if(!document.getElementById('bm-edit-author').value.trim()&&vol.authors?.length){
+      document.getElementById('bm-edit-author').value=vol.authors[0];filled.push('Autor');
+    }
+    // Seitenzahl
+    if(!document.getElementById('bm-edit-pages').value&&vol.pageCount){
+      document.getElementById('bm-edit-pages').value=vol.pageCount;filled.push('Seiten');
+    }
+    // Jahr
+    if(!document.getElementById('bm-edit-year').value&&vol.publishedDate){
+      const y=parseInt(vol.publishedDate);
+      if(y>1000){document.getElementById('bm-edit-year').value=y;filled.push('Jahr');}
+    }
+    // Sprache
+    if(!document.getElementById('bm-language').value.trim()&&vol.language){
+      const langMap={de:'Deutsch',en:'Englisch',it:'Italienisch',fr:'Französisch',es:'Spanisch',pt:'Portugiesisch',nl:'Niederländisch'};
+      const mapped=langMap[vol.language]||vol.language;
+      document.getElementById('bm-language').value=mapped;filled.push('Sprache');
+    }
+    // Typ (Genre)
+    if(!document.getElementById('bm-edit-type').value&&vol.categories?.length){
+      const cats=(vol.categories||[]).join(' ').toLowerCase();
+      let typ='';
+      if(/biography|autobio/.test(cats)) typ='Biografie';
+      else if(/thriller|mystery|crime|krimi/.test(cats)) typ='Krimi';
+      else if(/fantasy|magic/.test(cats)) typ='Fantasy';
+      else if(/poetry|lyrik/.test(cats)) typ='Lyrik';
+      else if(/fiction/.test(cats)) typ='Roman';
+      else if(/science|history|business|self.help|technology|sachbuch/.test(cats)) typ='Sachbuch';
+      else typ='Sonstiges';
+      document.getElementById('bm-edit-type').value=typ;filled.push('Typ');
+    }
+    // Cover
+    if(!document.getElementById('bm-cover-url').value.trim()&&vol.imageLinks){
+      const img=vol.imageLinks;
+      const url=(img.extraLarge||img.large||img.medium||img.thumbnail||'')
+        .replace('&edge=curl','').replace('http://','https://');
+      if(url){document.getElementById('bm-cover-url').value=url;previewCover();filled.push('Cover');}
+    }
+    if(filled.length){
+      toast(`Geladen: ${filled.join(', ')} ✓`,'success');
+    }else{
+      toast('Keine neuen Felder gefunden','info');
+    }
+  }catch(e){
+    toast('Fehler bei der Suche','error');
+  }finally{
+    btn.disabled=false;btn.textContent='🔍 Buch suchen';
+  }
 }
 
 // ── Unsaved changes tracking ──────────────────────────────
