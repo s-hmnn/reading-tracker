@@ -70,6 +70,7 @@
       if(!b.keywords) b.keywords = [];
       if(!b.format) b.format = '';
       if(!b.cover_url) b.cover_url = '';
+      if(!b.hasOwnProperty('isbn')) b.isbn = '';
       return b;
     });
     return s;
@@ -905,8 +906,15 @@
         <input type="text" id="bm-source" class="bm-input" placeholder="z.B. Empfehlung, Zeitungsartikel…">
       </div>
       <div class="bm-field">
+        <label class="bm-label">ISBN <span style="font-weight:400;color:var(--muted)">(optional, für Cover-Suche)</span></label>
+        <input type="text" id="bm-isbn" class="bm-input" placeholder="z.B. 978-3-…">
+      </div>
+      <div class="bm-field">
         <label class="bm-label">Cover-URL <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-        <input type="url" id="bm-cover-url" class="bm-input" placeholder="https://…" oninput="previewCover()">
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="url" id="bm-cover-url" class="bm-input" placeholder="https://…" oninput="previewCover()" style="flex:1">
+          <button type="button" class="btn btn-outline btn-sm" onclick="refreshCoverInModal()" title="Cover automatisch suchen">🔍</button>
+        </div>
       </div>
       <div class="bm-field">
         <label class="bm-label">Bewertung</label>
@@ -1813,7 +1821,7 @@ function openBookModal(id){
   let b;
   if(isNew){
     b={id:null,title:'',author:'',format:'',type:'',pages:'',year:CURRENT_YEAR,
-       status:'want_to_read',source:'',notes:'',rating:0,keywords:[],quotes:[],cover_url:''};
+       status:'want_to_read',source:'',notes:'',rating:0,keywords:[],quotes:[],cover_url:'',isbn:''};
   } else {
     b=state.books.find(b=>b.id===id);
     if(!b)return;
@@ -1836,6 +1844,7 @@ function openBookModal(id){
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-language').value=b.language||'';
   document.getElementById('bm-cover-url').value=b.cover_url||'';
+  document.getElementById('bm-isbn').value=b.isbn||'';
   document.getElementById('bm-notes').value=b.notes||'';
   document.getElementById('bm-ai-summary').innerHTML=b.aiSummary?renderAiSummaryHTML(b.aiSummary):'';
   const _aiBtn=document.getElementById('bm-ai-btn');
@@ -1861,7 +1870,7 @@ function openBookModal(id){
   // Attach autosave listeners (idempotent via flag)
   if(!document.getElementById('bmt-stammdaten').dataset.autosave){
     document.getElementById('bmt-stammdaten').dataset.autosave='1';
-    ['bm-edit-title','bm-edit-author','bm-format','bm-edit-type','bm-edit-pages','bm-edit-year','bm-source','bm-cover-url'].forEach(elId=>{
+    ['bm-edit-title','bm-edit-author','bm-format','bm-edit-type','bm-edit-pages','bm-edit-year','bm-source','bm-cover-url','bm-isbn'].forEach(elId=>{
       document.getElementById(elId)?.addEventListener('input',scheduleAutosave);
     });
     document.getElementById('bm-notes')?.addEventListener('input',scheduleAutosave);
@@ -1894,6 +1903,7 @@ async function saveBookDetails(){
   if(!titleVal){toast('Titel eingeben','error');return;}
   clearTimeout(_autosaveTimer);
   const coverUrlVal=document.getElementById('bm-cover-url').value.trim();
+  const isbnVal=document.getElementById('bm-isbn').value.trim();
   if(_bmIsNew){
     const newBook={
       id:state.nextId++,
@@ -1912,11 +1922,12 @@ async function saveBookDetails(){
       keywords:[..._bmKeywords],
       quotes:[..._bmQuotes],
       cover_url:coverUrlVal,
+      isbn:isbnVal,
     };
     state.books.push(newBook);
     // Auto-fetch cover if none provided
     if(!coverUrlVal){
-      const fetched=await fetchCoverUrl(newBook.title,newBook.author);
+      const fetched=await fetchCoverUrl(newBook.title,newBook.author,newBook.isbn);
       if(fetched){newBook.cover_url=fetched;}
     }
     save();toast('Buch hinzugefügt ✓','success');
@@ -1937,8 +1948,9 @@ async function saveBookDetails(){
     b.keywords=[..._bmKeywords];
     b.quotes=[..._bmQuotes];
     b.cover_url=coverUrlVal;
+    b.isbn=isbnVal;
     if(!coverUrlVal&&!hadCover){
-      const fetched=await fetchCoverUrl(b.title,b.author);
+      const fetched=await fetchCoverUrl(b.title,b.author,b.isbn);
       if(fetched){b.cover_url=fetched;document.getElementById('bm-cover-url').value=fetched;}
     }
     save();toast('Gespeichert ✓','success');
@@ -2813,8 +2825,30 @@ function previewCover(){
   if(url){thumb.src=url;thumb.style.display='block';}
   else thumb.style.display='none';
 }
-async function fetchCoverUrl(title,author){
+async function fetchCoverUrl(title,author,isbn){
+  // Primär: Google Books API (bessere Abdeckung, unterstützt ISBN)
   try{
+    let q;
+    if(isbn){
+      q='isbn:'+isbn.replace(/[-\s]/g,'');
+    }else{
+      q=encodeURIComponent(`intitle:${title}${author?` inauthor:${author}`:''}`)
+    }
+    const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    const data=await res.json();
+    const img=data?.items?.[0]?.volumeInfo?.imageLinks;
+    if(img){
+      const url=(img.extraLarge||img.large||img.medium||img.thumbnail||'')
+        .replace('&edge=curl','').replace('http://','https://');
+      if(url)return url;
+    }
+  }catch{}
+  // Fallback: OpenLibrary
+  try{
+    if(isbn){
+      const clean=isbn.replace(/[-\s]/g,'');
+      return`https://covers.openlibrary.org/b/isbn/${clean}-M.jpg`;
+    }
     const q=encodeURIComponent(`${title} ${author||''}`);
     const res=await fetch(`https://openlibrary.org/search.json?q=${q}&fields=cover_i&limit=1`);
     const data=await res.json();
@@ -2822,6 +2856,34 @@ async function fetchCoverUrl(title,author){
     if(id)return`https://covers.openlibrary.org/b/id/${id}-M.jpg`;
   }catch{}
   return null;
+}
+async function refreshCoverInModal(){
+  const title=document.getElementById('bm-edit-title').value.trim();
+  if(!title){toast('Titel eingeben','error');return;}
+  const author=document.getElementById('bm-edit-author').value.trim();
+  const isbn=document.getElementById('bm-isbn').value.trim();
+  toast('Cover wird gesucht…','info');
+  const url=await fetchCoverUrl(title,author,isbn);
+  if(url){
+    document.getElementById('bm-cover-url').value=url;
+    previewCover();
+    toast('Cover gefunden ✓','success');
+  }else{
+    toast('Kein Cover gefunden','error');
+  }
+}
+async function fetchMissingCovers(){
+  const missing=state.books.filter(b=>!b.cover_url);
+  if(!missing.length){toast('Alle Bücher haben bereits ein Cover','info');return;}
+  toast(`${missing.length} Cover werden geladen…`,'info');
+  let count=0;
+  for(const b of missing){
+    const url=await fetchCoverUrl(b.title,b.author,b.isbn);
+    if(url){b.cover_url=url;count++;}
+    await new Promise(r=>setTimeout(r,300));
+  }
+  save();renderBooks();
+  toast(`${count} von ${missing.length} Cover geladen ✓`,'success');
 }
 
 // ── Unsaved changes tracking ──────────────────────────────
