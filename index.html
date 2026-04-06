@@ -875,7 +875,10 @@
         </div>
       </div>
       <div class="bm-field" style="margin-top:0.8rem;border-top:1px solid var(--border);padding-top:0.8rem">
-        <label class="bm-label">Zitate</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem">
+          <label class="bm-label" style="margin-bottom:0">Zitate</label>
+          <button class="btn btn-outline btn-sm" onclick="deleteAllQuotes()" id="btn-delete-all-quotes" style="display:none;font-size:0.72rem;padding:0.15rem 0.5rem">Alle löschen</button>
+        </div>
         <div id="bm-quotes-list"></div>
         <div class="quote-add-form">
           <label class="bm-label">Neues Zitat</label>
@@ -1891,10 +1894,13 @@ function renderBookVerlauf(bookId){
 function renderQuotesList(){
   const wrap=document.getElementById('bm-quotes-list');
   if(!wrap)return;
+  const btn=document.getElementById('btn-delete-all-quotes');
   if(!_bmQuotes.length){
     wrap.innerHTML='<div class="empty" style="padding:0.6rem 0">Noch keine Zitate gespeichert</div>';
+    if(btn)btn.style.display='none';
     return;
   }
+  if(btn)btn.style.display='';
   wrap.innerHTML=_bmQuotes.map((q,i)=>`
     <div class="quote-item">
       <button class="quote-del" onclick="deleteQuote(${i})">×</button>
@@ -1912,6 +1918,7 @@ function addQuote(){
   renderQuotesList();
 }
 function deleteQuote(idx){_bmQuotes.splice(idx,1);renderQuotesList();}
+function deleteAllQuotes(){if(!_bmQuotes.length)return;if(!confirm(`Alle ${_bmQuotes.length} Zitate löschen?`))return;_bmQuotes=[];renderQuotesList();}
 
 // ── Kindle Import ────────────────────────────────────────
 let _kindleParsed = [];
