@@ -303,6 +303,14 @@
   .book-status-badge{font-family:'DM Mono',monospace;font-size:0.52rem;padding:0.1rem 0.38rem;border-radius:6px;flex-shrink:0;}
   .book-status-badge.want{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
   .book-status-badge.reading{background:var(--sky-light);color:var(--sky-dark);border:1px solid var(--sky-dark);}
+  .book-right-col{display:flex;flex-direction:column;align-items:flex-end;gap:0.18rem;flex-shrink:0;}
+  .book-badges-row{display:flex;align-items:center;gap:0.22rem;flex-wrap:nowrap;}
+  .book-lang-flag{font-size:0.9rem;line-height:1;flex-shrink:0;}
+  .book-stars-display{display:inline-flex;align-items:center;gap:0.5px;}
+  .bsd-star{font-size:0.68rem;line-height:1;}
+  .bsd-star.full{color:#F59E0B;}
+  .bsd-star.half{color:#FCD34D;}
+  .bsd-star.empty{color:#CBD5E1;}
   /* Book Detail Modal */
   #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
@@ -1454,6 +1462,38 @@ function getBookProgress(book){
 let booksFormatF='all';
 function toggleBooksFormat(f){booksFormatF=f;renderBooks();}
 
+function langFlag(lang){
+  if(!lang)return'';
+  const l=lang.toLowerCase();
+  if(l.includes('deutsch')||l.includes('german'))return'🇩🇪';
+  if(l.includes('englisch')||l.includes('english'))return'🇬🇧';
+  if(l.includes('italienisch')||l.includes('italian'))return'🇮🇹';
+  if(l.includes('französisch')||l.includes('french'))return'🇫🇷';
+  if(l.includes('spanisch')||l.includes('spanish'))return'🇪🇸';
+  if(l.includes('portugiesisch')||l.includes('portuguese'))return'🇵🇹';
+  if(l.includes('niederländisch')||l.includes('dutch'))return'🇳🇱';
+  if(l.includes('russisch')||l.includes('russian'))return'🇷🇺';
+  if(l.includes('japanisch')||l.includes('japanese'))return'🇯🇵';
+  if(l.includes('chinesisch')||l.includes('chinese'))return'🇨🇳';
+  if(l.includes('arabisch')||l.includes('arabic'))return'🇸🇦';
+  if(l.includes('polnisch')||l.includes('polish'))return'🇵🇱';
+  if(l.includes('türkisch')||l.includes('turkish'))return'🇹🇷';
+  if(l.includes('schwedisch')||l.includes('swedish'))return'🇸🇪';
+  if(l.includes('norwegisch')||l.includes('norwegian'))return'🇳🇴';
+  if(l.includes('dänisch')||l.includes('danish'))return'🇩🇰';
+  return'';
+}
+function starsDisplayHtml(rating){
+  if(!rating)return'';
+  let html='<span class="book-stars-display">';
+  for(let i=1;i<=5;i++){
+    if(rating>=i)html+='<span class="bsd-star full">★</span>';
+    else if(rating>=i-0.5)html+='<span class="bsd-star half">★</span>';
+    else html+='<span class="bsd-star empty">☆</span>';
+  }
+  return html+'</span>';
+}
+
 function renderBooks(){
   const years=allYears();
   const fc=document.getElementById('books-year-filter');
@@ -1561,11 +1601,15 @@ function renderBooks(){
         ${readToday?'<div class="book-today-dot" title="Heute gelesen"></div>':''}
         <div style="flex:1;min-width:0"><div class="book-title">${cap(b.title)}</div>${b.author?`<div class="book-meta">${b.author}</div>`:''}</div>
         ${sBadge(b.status)}
-        ${b.type?`<div class="book-type-badge">${b.type}</div>`:''}
-        ${b.pages?`<div class="book-pages">${b.pages}S.</div>`:''}
-        ${avgBadge}
-        <div class="book-year-badge">${b.year}</div>
-        <button class="edit-toggle" onclick="toggleEditBook(${b.id},event)">✎</button>
+        <div class="book-right-col">
+          <div class="book-badges-row">
+            ${b.type?`<span class="book-type-badge">${b.type}</span>`:''}
+            ${avgBadge}
+            <span class="book-year-badge">${b.year}</span>
+            ${b.language&&langFlag(b.language)?`<span class="book-lang-flag">${langFlag(b.language)}</span>`:''}
+          </div>
+          ${starsDisplayHtml(b.rating)}
+        </div>
       </div>
       <div class="book-edit-row">
         <input id="et-${b.id}" type="text" value="${cap(b.title)}" placeholder="Titel" style="flex:3;min-width:90px">
