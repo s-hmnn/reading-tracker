@@ -1541,7 +1541,7 @@ function renderBooks(){
     const ratingRanges=[{v:'',l:'Alle'},{v:'5',l:'★★★★★'},{v:'4',l:'≥ ★★★★'},{v:'3',l:'≥ ★★★'},{v:'2',l:'≥ ★★'},{v:'0.1',l:'Bewertet'}];
     advInner.innerHTML=`<div class="adv-filter-grid">
       <div class="adv-filter-cell"><label class="adv-filter-label">Autor/in</label><input class="adv-filter-input" id="adv-author-input" placeholder="Autor/in…" value="${booksAuthorF.replace(/"/g,'&quot;')}" oninput="booksAuthorF=this.value;renderBooks()"></div>
-      <div class="adv-filter-cell"><label class="adv-filter-label">Verlag</label><input class="adv-filter-input" id="adv-verlag-input" placeholder="Verlag…" value="${booksVerlagF.replace(/"/g,'&quot;')}" oninput="booksVerlagF=this.value;renderBooks()"></div>
+      <div class="adv-filter-cell"><label class="adv-filter-label">Verlag</label><input class="adv-filter-input" id="adv-verlag-input" list="adv-verlag-list" placeholder="Verlag…" value="${booksVerlagF.replace(/"/g,'&quot;')}" oninput="booksVerlagF=this.value;renderBooks()"><datalist id="adv-verlag-list">${verlags.map(v=>`<option value="${v.replace(/"/g,'&quot;')}">`).join('')}</datalist></div>
       ${mkSel('adv-format-sel','Format',booksFormatF,[{v:'Buch',l:'Buch'},{v:'E-Book',l:'E-Book'},{v:'Hörbuch',l:'Hörbuch'}].map(f=>f.v),'booksFormatF=this.value;renderBooks()')}
       ${types.length?mkSel('adv-type-sel','Typ',booksTypeF,types,'booksTypeF=this.value;renderBooks()'):''}
       ${langs.length?mkSel('adv-lang-sel','Sprache',booksLangF,langs,'booksLangF=this.value;renderBooks()'):''}
