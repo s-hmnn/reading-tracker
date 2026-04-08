@@ -273,7 +273,7 @@
   .book-item.done .book-check{background:var(--success);border-color:var(--success);color:white;}
   .book-title{font-size:0.85rem;flex:1;}
   .book-meta{font-size:0.7rem;color:var(--muted);font-style:italic;}
-  .book-meta-row{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;min-height:1rem;}
+  .book-meta-row{display:flex;align-items:center;gap:0.35rem;}
   .book-pages{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);flex-shrink:0;}
   .book-year-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;color:var(--muted);flex-shrink:0;}
   .book-type-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--sky-light);border-radius:6px;color:var(--sky-dark);border:1px solid var(--sky-dark);flex-shrink:0;}
@@ -313,11 +313,11 @@
   .adv-pages-row{display:flex;gap:0.25rem;flex-wrap:wrap;margin-top:0.15rem;}
   .adv-pages-btn{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.2rem 0.45rem;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:6px;cursor:pointer;white-space:nowrap;}
   .adv-pages-btn.active{background:var(--sky-light);color:var(--sky-dark);border-color:var(--sky-dark);}
-  .book-right-col{display:flex;align-items:center;gap:0.22rem;flex-shrink:0;}
+  .book-right-col{display:flex;flex-direction:column;align-items:flex-end;gap:0.15rem;flex-shrink:0;}
   .book-badges-row{display:flex;align-items:center;gap:0.22rem;flex-wrap:nowrap;}
   .book-lang-flag{display:inline-block;width:1rem;height:0.75rem;border-radius:2px;overflow:hidden;flex-shrink:0;vertical-align:middle;}
   .book-stars-display{display:flex;flex-wrap:nowrap;align-items:center;gap:0;}
-  .bsd-star{font-size:0.72rem;line-height:1;width:0.75rem;text-align:center;display:inline-block;}
+  .bsd-star{font-size:0.72rem;line-height:1;}
   .bsd-star.full{color:#F59E0B;}
   .bsd-star.half{color:#FCD34D;}
   .bsd-star.empty{color:#CBD5E1;}
@@ -1658,10 +1658,7 @@ function renderBooks(){
         ${readToday?'<div class="book-today-dot" title="Heute gelesen"></div>':''}
         <div style="flex:1;min-width:0">
           <div class="book-title">${cap(b.title)}</div>
-          <div class="book-meta-row">
-            ${b.author?`<span class="book-meta">${b.author}</span>`:''}
-            ${starsDisplayHtml(b.rating)}
-          </div>
+          ${b.author?`<div class="book-meta">${b.author}</div>`:''}
         </div>
         ${sBadge(b.status)}
         <div class="book-right-col">
@@ -1671,6 +1668,7 @@ function renderBooks(){
             <span class="book-year-badge">${b.year}</span>
             ${b.language&&langFlag(b.language)?`<span class="fi fi-${langFlag(b.language)} book-lang-flag"></span>`:''}
           </div>
+          ${starsDisplayHtml(b.rating)}
         </div>
       </div>
       <div class="book-edit-row">
