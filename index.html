@@ -306,7 +306,7 @@
   /* Book Detail Modal */
   #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
-  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
+  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
   @media(min-width:560px){#book-modal-panel{border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.16);}}
   @-webkit-keyframes bmFade{from{opacity:0;}to{opacity:1;}}
   @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
@@ -923,7 +923,7 @@
         <label class="bm-label">Bewertung</label>
         <div id="bm-stars" class="star-widget"></div>
       </div>
-      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;position:sticky;bottom:0;background:var(--card);padding-top:0.5rem;padding-bottom:0.5rem">
         <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
         <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
       </div>
@@ -959,7 +959,7 @@
           <button class="btn btn-outline btn-sm" style="width:100%" onclick="openKindleImport()">Kindle Highlights importieren</button>
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;position:sticky;bottom:0;background:var(--card);padding-top:0.5rem;padding-bottom:0.5rem">
         <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
         <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
       </div>
@@ -981,7 +981,7 @@
 
 <!-- KINDLE IMPORT MODAL -->
 <div id="kindle-modal" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:200;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease" onclick="closeKindleImport(event)">
-  <div id="kindle-modal-panel" onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12)">
+  <div id="kindle-modal-panel" onclick="event.stopPropagation()" style="background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;max-height:90dvh;overflow-y:auto;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
       <div style="font-family:'Inter',sans-serif;font-weight:600;font-size:1rem">Kindle Highlights importieren</div>
       <button class="btn btn-outline btn-sm" onclick="closeKindleImport()">✕</button>
@@ -1076,6 +1076,23 @@ function getLastPosition(bookId){
   const cum=bl.reduce((s,l)=>s+(l.pages||0),0);
   return{position:cum,type:'page'};
 }
+function getPositionBefore(bookId,date){
+  const bl=state.logs.filter(l=>l.bookId===bookId&&l.date<date).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  if(!bl.length)return null;
+  const last=bl[bl.length-1];
+  if(last.currentPosition!=null)return{position:last.currentPosition,type:last.positionType||'page'};
+  const cum=bl.reduce((s,l)=>s+(l.pages||0),0);
+  return{position:cum,type:'page'};
+}
+function recalcPagesAfter(bookId,fromDate){
+  const sorted=state.logs.filter(l=>l.bookId===bookId).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  for(let i=0;i<sorted.length;i++){
+    if(sorted[i].date<fromDate)continue;
+    const prev=i>0?sorted[i-1]:null;
+    const prevPos=prev?.currentPosition??0;
+    sorted[i].pages=Math.max(0,(sorted[i].currentPosition??0)-prevPos);
+  }
+}
 
 function togglePositionMode(){
   positionMode=(positionMode==='page')?'percent':'page';
@@ -1103,7 +1120,9 @@ function updateLastPosHint(){
   if(!sel||!hint)return;
   const bookId=sel?parseInt(sel.value):NaN;
   if(!bookId||isNaN(bookId)){hint.textContent='';return;}
-  const last=getLastPosition(bookId);
+  const dateEl=document.getElementById('log-date');
+  const date=dateEl&&dateEl.value?dateEl.value:todayStr();
+  const last=getPositionBefore(bookId,date)??getLastPosition(bookId);
   if(!last){hint.textContent='Erster Eintrag – aktuelle Position wird direkt als gelesen gewertet';return;}
   const book=state.books.find(b=>b.id===bookId);
   if(last.type==='percent'){hint.textContent=`Zuletzt: ${last.position}%`;}
@@ -1167,7 +1186,7 @@ function quickLogYesterday(){
   if(!rawVal||rawVal<=0){toast('Seite / % eingeben');return;}
   const date=yesterdayStr();
   const book=state.books.find(b=>b.id===bookId);
-  const last=getLastPosition(bookId);
+  const last=getPositionBefore(bookId,date);
   let pages,currentPosition,positionType;
   if(_ybMode==='percent'){
     positionType='percent';currentPosition=Math.min(100,Math.max(0,rawVal));
@@ -1194,7 +1213,7 @@ function addEntry(){
   const inputVal=parseFloat(pagesEl.value);
   if(!date||isNaN(inputVal)||inputVal<0){toast('Datum und Position angeben!');return;}
   const book=state.books.find(b=>b.id===bookId);
-  const last=getLastPosition(bookId);
+  const last=getPositionBefore(bookId,date);
   let deltaPages,currentPosition,positionType;
   if(positionMode==='percent'){
     positionType='percent';
@@ -1212,6 +1231,7 @@ function addEntry(){
   }
   if(book&&book.status==='want_to_read'){book.status='reading';}
   state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages:deltaPages,currentPosition,positionType});
+  recalcPagesAfter(bookId,date);
   save();
   const _lp=document.getElementById('log-pages');if(_lp)_lp.value='';
   updateLastPosHint();
@@ -1219,8 +1239,8 @@ function addEntry(){
   refreshAll();
 }
 
-function deleteEntry(id){state.logs=state.logs.filter(l=>l.id!==id);save();renderLog();renderTodayStats();}
-function deleteEntriesByDateBook(date,bookId){state.logs=state.logs.filter(l=>!(l.date===date&&l.bookId===bookId));save();renderLog();renderTodayStats();}
+function deleteEntry(id){const e=state.logs.find(l=>l.id===id);state.logs=state.logs.filter(l=>l.id!==id);if(e)recalcPagesAfter(e.bookId,e.date);save();renderLog();renderTodayStats();}
+function deleteEntriesByDateBook(date,bookId){state.logs=state.logs.filter(l=>!(l.date===date&&l.bookId===bookId));recalcPagesAfter(bookId,date);save();renderLog();renderTodayStats();}
 
 function renderLog(){
   const tbody=document.getElementById('log-body'),empty=document.getElementById('log-empty');
@@ -2541,7 +2561,7 @@ window.initApp=function(){
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
   document.getElementById('header-year').textContent=CURRENT_YEAR;
-  const _logDate=document.getElementById('log-date');if(_logDate)_logDate.value=yesterdayStr();
+  const _logDate=document.getElementById('log-date');if(_logDate){_logDate.value=yesterdayStr();_logDate.addEventListener('change',updateLastPosHint);}
   populateBookSelect();updateLastPosHint();refreshAll();
 };
 
