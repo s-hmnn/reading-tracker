@@ -1481,11 +1481,11 @@ function getBookProgress(book){
 
 let booksFormatF='all';
 function toggleBooksFormat(f){booksFormatF=f;renderBooks();}
-let booksTypeF='',booksLangF='',booksVerlagF='',booksSourceF='',booksPagesF='',booksAuthorF='';
+let booksTypeF='',booksLangF='',booksVerlagF='',booksSourceF='',booksPagesF='',booksAuthorF='',booksRatingF='';
 let _advOpen=false;
 function toggleAdvFilter(){_advOpen=!_advOpen;document.getElementById('books-adv-panel').style.display=_advOpen?'block':'none';renderBooks();}
-function clearAdvFilter(){booksFormatF='all';booksTypeF='';booksLangF='';booksVerlagF='';booksSourceF='';booksPagesF='';booksAuthorF='';const ai=document.getElementById('books-adv-inner');if(ai)ai.querySelectorAll('select').forEach(s=>s.value='');const inp=document.getElementById('adv-author-input');if(inp)inp.value='';renderBooks();}
-function _advCount(){let n=0;if(booksFormatF!=='all')n++;if(booksTypeF)n++;if(booksLangF)n++;if(booksVerlagF)n++;if(booksSourceF)n++;if(booksPagesF)n++;if(booksAuthorF)n++;return n;}
+function clearAdvFilter(){booksFormatF='all';booksTypeF='';booksLangF='';booksVerlagF='';booksSourceF='';booksPagesF='';booksAuthorF='';booksRatingF='';const ai=document.getElementById('books-adv-inner');if(ai){ai.querySelectorAll('select').forEach(s=>s.value='');ai.querySelectorAll('input[type=text]').forEach(i=>i.value='');}renderBooks();}
+function _advCount(){let n=0;if(booksFormatF!=='all')n++;if(booksTypeF)n++;if(booksLangF)n++;if(booksVerlagF)n++;if(booksSourceF)n++;if(booksPagesF)n++;if(booksAuthorF)n++;if(booksRatingF)n++;return n;}
 
 function langFlag(lang){
   if(!lang)return'';
@@ -1538,15 +1538,17 @@ function renderBooks(){
     const sources=uniq(state.books.map(b=>b.source));
     const mkSel=(id,label,val,opts,onchange)=>`<div class="adv-filter-cell"><label class="adv-filter-label">${label}</label><select class="adv-filter-select" id="${id}" onchange="${onchange}"><option value="">Alle</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
     const pagesRanges=[{v:'',l:'Alle'},{v:'<200',l:'< 200'},{v:'200-400',l:'200–400'},{v:'400-600',l:'400–600'},{v:'>600',l:'> 600'}];
+    const ratingRanges=[{v:'',l:'Alle'},{v:'5',l:'★★★★★'},{v:'4',l:'≥ ★★★★'},{v:'3',l:'≥ ★★★'},{v:'2',l:'≥ ★★'},{v:'0.1',l:'Bewertet'}];
     advInner.innerHTML=`<div class="adv-filter-grid">
       <div class="adv-filter-cell"><label class="adv-filter-label">Autor/in</label><input class="adv-filter-input" id="adv-author-input" placeholder="Autor/in…" value="${booksAuthorF.replace(/"/g,'&quot;')}" oninput="booksAuthorF=this.value;renderBooks()"></div>
+      <div class="adv-filter-cell"><label class="adv-filter-label">Verlag</label><input class="adv-filter-input" id="adv-verlag-input" placeholder="Verlag…" value="${booksVerlagF.replace(/"/g,'&quot;')}" oninput="booksVerlagF=this.value;renderBooks()"></div>
       ${mkSel('adv-format-sel','Format',booksFormatF,[{v:'Buch',l:'Buch'},{v:'E-Book',l:'E-Book'},{v:'Hörbuch',l:'Hörbuch'}].map(f=>f.v),'booksFormatF=this.value;renderBooks()')}
       ${types.length?mkSel('adv-type-sel','Typ',booksTypeF,types,'booksTypeF=this.value;renderBooks()'):''}
       ${langs.length?mkSel('adv-lang-sel','Sprache',booksLangF,langs,'booksLangF=this.value;renderBooks()'):''}
-      ${verlags.length?mkSel('adv-verlag-sel','Verlag',booksVerlagF,verlags,'booksVerlagF=this.value;renderBooks()'):''}
       ${sources.length?mkSel('adv-source-sel','Quelle',booksSourceF,sources,'booksSourceF=this.value;renderBooks()'):''}
     </div>
-    <div style="margin-top:0.5rem"><label class="adv-filter-label">Seitenanzahl</label><div class="adv-pages-row">${pagesRanges.map(r=>`<button class="adv-pages-btn${booksPagesF===r.v?' active':''}" onclick="booksPagesF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>`;
+    <div style="margin-top:0.5rem"><label class="adv-filter-label">Seitenanzahl</label><div class="adv-pages-row">${pagesRanges.map(r=>`<button class="adv-pages-btn${booksPagesF===r.v?' active':''}" onclick="booksPagesF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>
+    <div style="margin-top:0.5rem"><label class="adv-filter-label">Bewertung</label><div class="adv-pages-row">${ratingRanges.map(r=>`<button class="adv-pages-btn${booksRatingF===r.v?' active':''}" onclick="booksRatingF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>`;
   }
   // Badge count
   const advBadge=document.getElementById('books-adv-badge');
@@ -1577,7 +1579,8 @@ function renderBooks(){
     if(booksFormatF!=='all'&&b.format!==booksFormatF)return false;
     if(booksTypeF&&b.type!==booksTypeF)return false;
     if(booksLangF&&b.language!==booksLangF)return false;
-    if(booksVerlagF&&b.verlag!==booksVerlagF)return false;
+    if(booksVerlagF&&!(b.verlag||'').toLowerCase().includes(booksVerlagF.toLowerCase()))return false;
+    if(booksRatingF){const minR=parseFloat(booksRatingF);if(booksRatingF==='5'?(b.rating||0)<5:(b.rating||0)<minR)return false;}
     if(booksSourceF&&b.source!==booksSourceF)return false;
     if(booksAuthorF&&!(b.author||'').toLowerCase().includes(booksAuthorF.toLowerCase()))return false;
     if(booksPagesF){const p=b.pages||0;if(booksPagesF==='<200'&&p>=200)return false;if(booksPagesF==='200-400'&&(p<200||p>400))return false;if(booksPagesF==='400-600'&&(p<400||p>600))return false;if(booksPagesF==='>600'&&p<=600)return false;}
@@ -3069,6 +3072,10 @@ async function lookupBookMetadata(){
       else if(/science|history|business|self.help|technology|sachbuch/.test(cats)) typ='Sachbuch';
       else typ='Sonstiges';
       document.getElementById('bm-edit-type').value=typ;filled.push('Typ');
+    }
+    // Verlag
+    if(!document.getElementById('bm-verlag').value.trim()&&vol.publisher){
+      document.getElementById('bm-verlag').value=vol.publisher;filled.push('Verlag');
     }
     // Cover
     if(!document.getElementById('bm-cover-url').value.trim()&&vol.imageLinks){
