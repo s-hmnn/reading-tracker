@@ -1479,13 +1479,13 @@ function getBookProgress(book){
   return{pct,label};
 }
 
-let booksFormatF='all';
-function toggleBooksFormat(f){booksFormatF=f;renderBooks();}
-let booksTypeF='',booksLangF='',booksVerlagF='',booksSourceF='',booksPagesF='',booksAuthorF='',booksRatingF='';
+let booksFormatFS=new Set(),booksTypeFS=new Set(),booksLangFS=new Set();
+let booksVerlagF='',booksSourceF='',booksPagesF='',booksAuthorF='',booksRatingF='';
 let _advOpen=false;
 function toggleAdvFilter(){_advOpen=!_advOpen;document.getElementById('books-adv-panel').style.display=_advOpen?'block':'none';renderBooks();}
-function clearAdvFilter(){booksFormatF='all';booksTypeF='';booksLangF='';booksVerlagF='';booksSourceF='';booksPagesF='';booksAuthorF='';booksRatingF='';const ai=document.getElementById('books-adv-inner');if(ai){ai.querySelectorAll('select').forEach(s=>s.value='');ai.querySelectorAll('input[type=text]').forEach(i=>i.value='');}renderBooks();}
-function _advCount(){let n=0;if(booksFormatF!=='all')n++;if(booksTypeF)n++;if(booksLangF)n++;if(booksVerlagF)n++;if(booksSourceF)n++;if(booksPagesF)n++;if(booksAuthorF)n++;if(booksRatingF)n++;return n;}
+function toggleAdvSet(setName,val){const m={booksFormatFS,booksTypeFS,booksLangFS};const s=m[setName];if(s){s.has(val)?s.delete(val):s.add(val);}renderBooks();}
+function clearAdvFilter(){booksFormatFS.clear();booksTypeFS.clear();booksLangFS.clear();booksVerlagF='';booksSourceF='';booksPagesF='';booksAuthorF='';booksRatingF='';const ai=document.getElementById('books-adv-inner');if(ai)ai.querySelectorAll('input[type=text]').forEach(i=>i.value='');renderBooks();}
+function _advCount(){return booksFormatFS.size+booksTypeFS.size+booksLangFS.size+(booksVerlagF?1:0)+(booksSourceF?1:0)+(booksPagesF?1:0)+(booksAuthorF?1:0)+(booksRatingF?1:0);}
 
 function langFlag(lang){
   if(!lang)return'';
@@ -1536,17 +1536,18 @@ function renderBooks(){
     const langs=uniq(state.books.map(b=>b.language));
     const verlags=uniq(state.books.map(b=>b.verlag));
     const sources=uniq(state.books.map(b=>b.source));
-    const mkSel=(id,label,val,opts,onchange)=>`<div class="adv-filter-cell"><label class="adv-filter-label">${label}</label><select class="adv-filter-select" id="${id}" onchange="${onchange}"><option value="">Alle</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
+    const mkChips=(label,setName,activeSet,opts)=>`<div style="margin-top:0.5rem"><label class="adv-filter-label">${label}</label><div class="adv-pages-row">${opts.map(o=>`<button class="adv-pages-btn${activeSet.has(o)?' active':''}" onclick="toggleAdvSet('${setName}','${o.replace(/'/g,"\\'")}')">${o}</button>`).join('')}</div></div>`;
     const pagesRanges=[{v:'',l:'Alle'},{v:'<200',l:'< 200'},{v:'200-400',l:'200–400'},{v:'400-600',l:'400–600'},{v:'>600',l:'> 600'}];
     const ratingRanges=[{v:'',l:'Alle'},{v:'5',l:'★★★★★'},{v:'4',l:'≥ ★★★★'},{v:'3',l:'≥ ★★★'},{v:'2',l:'≥ ★★'},{v:'0.1',l:'Bewertet'}];
+    const mkSel=(id,label,val,opts,onchange)=>`<div class="adv-filter-cell"><label class="adv-filter-label">${label}</label><select class="adv-filter-select" id="${id}" onchange="${onchange}"><option value="">Alle</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
     advInner.innerHTML=`<div class="adv-filter-grid">
       <div class="adv-filter-cell"><label class="adv-filter-label">Autor/in</label><input class="adv-filter-input" id="adv-author-input" placeholder="Autor/in…" value="${booksAuthorF.replace(/"/g,'&quot;')}" oninput="booksAuthorF=this.value;renderBooks()"></div>
       <div class="adv-filter-cell"><label class="adv-filter-label">Verlag</label><input class="adv-filter-input" id="adv-verlag-input" list="adv-verlag-list" placeholder="Verlag…" value="${booksVerlagF.replace(/"/g,'&quot;')}" oninput="booksVerlagF=this.value;renderBooks()"><datalist id="adv-verlag-list">${verlags.map(v=>`<option value="${v.replace(/"/g,'&quot;')}">`).join('')}</datalist></div>
-      ${mkSel('adv-format-sel','Format',booksFormatF,[{v:'Buch',l:'Buch'},{v:'E-Book',l:'E-Book'},{v:'Hörbuch',l:'Hörbuch'}].map(f=>f.v),'booksFormatF=this.value;renderBooks()')}
-      ${types.length?mkSel('adv-type-sel','Typ',booksTypeF,types,'booksTypeF=this.value;renderBooks()'):''}
-      ${langs.length?mkSel('adv-lang-sel','Sprache',booksLangF,langs,'booksLangF=this.value;renderBooks()'):''}
       ${sources.length?mkSel('adv-source-sel','Quelle',booksSourceF,sources,'booksSourceF=this.value;renderBooks()'):''}
     </div>
+    ${mkChips('Format','booksFormatFS',booksFormatFS,['Buch','E-Book','Hörbuch'])}
+    ${types.length?mkChips('Typ','booksTypeFS',booksTypeFS,types):''}
+    ${langs.length?mkChips('Sprache','booksLangFS',booksLangFS,langs):''}
     <div style="margin-top:0.5rem"><label class="adv-filter-label">Seitenanzahl</label><div class="adv-pages-row">${pagesRanges.map(r=>`<button class="adv-pages-btn${booksPagesF===r.v?' active':''}" onclick="booksPagesF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>
     <div style="margin-top:0.5rem"><label class="adv-filter-label">Bewertung</label><div class="adv-pages-row">${ratingRanges.map(r=>`<button class="adv-pages-btn${booksRatingF===r.v?' active':''}" onclick="booksRatingF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>`;
   }
@@ -1576,9 +1577,9 @@ function renderBooks(){
   let books=state.books.filter(b=>{
     if(booksYF.size>0&&!booksYF.has(b.year))return false;
     if(booksStatusF!=='all'&&b.status!==booksStatusF)return false;
-    if(booksFormatF!=='all'&&b.format!==booksFormatF)return false;
-    if(booksTypeF&&b.type!==booksTypeF)return false;
-    if(booksLangF&&b.language!==booksLangF)return false;
+    if(booksFormatFS.size>0&&!booksFormatFS.has(b.format||''))return false;
+    if(booksTypeFS.size>0&&!booksTypeFS.has(b.type||''))return false;
+    if(booksLangFS.size>0&&!booksLangFS.has(b.language||''))return false;
     if(booksVerlagF&&!(b.verlag||'').toLowerCase().includes(booksVerlagF.toLowerCase()))return false;
     if(booksRatingF){const minR=parseFloat(booksRatingF);if(booksRatingF==='5'?(b.rating||0)<5:(b.rating||0)<minR)return false;}
     if(booksSourceF&&b.source!==booksSourceF)return false;
