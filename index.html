@@ -320,7 +320,6 @@
   .bsd-star{font-size:0.72rem;line-height:1;}
   .bsd-star.full{color:#F59E0B;}
   .bsd-star.half{color:#FCD34D;}
-  .bsd-star.empty{color:#CBD5E1;}
   /* Book Detail Modal */
   #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
@@ -1515,7 +1514,6 @@ function starsDisplayHtml(rating){
   for(let i=1;i<=5;i++){
     if(rating>=i)html+='<span class="bsd-star full">★</span>';
     else if(rating>=i-0.5)html+='<span class="bsd-star half">★</span>';
-    else html+='<span class="bsd-star empty">★</span>';
   }
   return html+'</span>';
 }
