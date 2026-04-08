@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>Crescendo</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -266,14 +267,14 @@
   .book-list{display:flex;flex-direction:column;gap:0.35rem;}
   .book-item{border:none;border-radius:10px;background:var(--card);transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);}
   .book-item.done{background:#f0f7f4;box-shadow:0 1px 3px rgba(0,0,0,0.05),0 0 0 1.5px #b0d4c0;}
-  .book-item-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none;}
+  .book-item-row{display:flex;align-items:flex-start;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none;}
   .book-item.done .book-title{color:var(--muted);}
-  .book-check{width:17px;height:17px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:transparent;transition:all 0.15s;}
+  .book-check{width:17px;height:17px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:transparent;transition:all 0.15s;margin-top:2px;}
   .book-item.done .book-check{background:var(--success);border-color:var(--success);color:white;}
   .book-title{font-size:0.85rem;flex:1;}
   .book-meta{font-size:0.7rem;color:var(--muted);font-style:italic;}
   .book-pages{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);flex-shrink:0;}
-  .book-year-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--cream);border-radius:6px;color:var(--muted);flex-shrink:0;}
+  .book-year-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;color:var(--muted);flex-shrink:0;}
   .book-type-badge{font-family:'DM Mono',monospace;font-size:0.56rem;padding:0.12rem 0.38rem;background:var(--sky-light);border-radius:6px;color:var(--sky-dark);border:1px solid var(--sky-dark);flex-shrink:0;}
   .book-edit-row{display:none;padding:0 0.85rem 0.7rem 2.4rem;gap:0.45rem;flex-wrap:wrap;align-items:center;}
   .book-item.editing .book-edit-row{display:flex;}
@@ -303,11 +304,19 @@
   .book-status-badge{font-family:'DM Mono',monospace;font-size:0.52rem;padding:0.1rem 0.38rem;border-radius:6px;flex-shrink:0;}
   .book-status-badge.want{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
   .book-status-badge.reading{background:var(--sky-light);color:var(--sky-dark);border:1px solid var(--sky-dark);}
-  .book-right-col{display:flex;flex-direction:column;align-items:flex-end;gap:0.18rem;flex-shrink:0;}
+  .adv-filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;}
+  @media(min-width:480px){.adv-filter-grid{grid-template-columns:1fr 1fr 1fr;}}
+  .adv-filter-label{font-family:'DM Mono',monospace;font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.2rem;}
+  .adv-filter-select,.adv-filter-input{font-family:'DM Mono',monospace;font-size:0.75rem;padding:0.28rem 0.45rem;border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:7px;width:100%;cursor:pointer;}
+  .adv-filter-select:focus,.adv-filter-input:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
+  .adv-pages-row{display:flex;gap:0.25rem;flex-wrap:wrap;margin-top:0.15rem;}
+  .adv-pages-btn{font-family:'DM Mono',monospace;font-size:0.6rem;padding:0.2rem 0.45rem;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:6px;cursor:pointer;white-space:nowrap;}
+  .adv-pages-btn.active{background:var(--sky-light);color:var(--sky-dark);border-color:var(--sky-dark);}
+  .book-right-col{display:flex;flex-direction:column;align-items:flex-end;gap:0.2rem;flex-shrink:0;}
   .book-badges-row{display:flex;align-items:center;gap:0.22rem;flex-wrap:nowrap;}
-  .book-lang-flag{font-size:0.9rem;line-height:1;flex-shrink:0;}
-  .book-stars-display{display:inline-flex;align-items:center;gap:0.5px;}
-  .bsd-star{font-size:0.68rem;line-height:1;}
+  .book-lang-flag{display:inline-block;width:1rem;height:0.75rem;border-radius:2px;overflow:hidden;flex-shrink:0;vertical-align:middle;}
+  .book-stars-display{display:flex;flex-wrap:nowrap;align-items:center;gap:0;}
+  .bsd-star{font-size:0.72rem;line-height:1;width:0.75rem;text-align:center;display:inline-block;}
   .bsd-star.full{color:#F59E0B;}
   .bsd-star.half{color:#FCD34D;}
   .bsd-star.empty{color:#CBD5E1;}
@@ -702,13 +711,20 @@
   <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.35rem">
     <div class="filter-row" id="books-status-filter"></div>
   </div>
-  <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.35rem">
-    <div class="filter-row" id="books-format-filter"></div>
-  </div>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
     <div class="filter-row" id="books-year-filter"></div>
-    <button id="books-grid-toggle" onclick="toggleGridView()" title="Listenansicht / Kachelansicht" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:0.8rem;color:var(--muted);flex-shrink:0;margin-left:0.4rem;min-height:30px">⊞</button>
+    <div style="display:flex;gap:0.4rem;align-items:center;flex-shrink:0;margin-left:0.4rem">
+      <button id="books-adv-toggle" onclick="toggleAdvFilter()" title="Erweiterte Filter" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:0.75rem;color:var(--muted);white-space:nowrap;min-height:30px">Filter <span id="books-adv-badge" style="display:none;background:var(--sky-dark);color:white;border-radius:999px;font-size:0.6rem;padding:0 4px;margin-left:2px;vertical-align:middle"></span></button>
+      <button id="books-grid-toggle" onclick="toggleGridView()" title="Listenansicht / Kachelansicht" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:0.8rem;color:var(--muted);min-height:30px">⊞</button>
+    </div>
   </div>
+  <div id="books-adv-panel" style="display:none;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:0.75rem;margin-bottom:0.65rem">
+    <div id="books-adv-inner"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:0.6rem">
+      <button class="btn btn-outline btn-sm" onclick="clearAdvFilter()" style="font-size:0.7rem">Filter zurücksetzen</button>
+    </div>
+  </div>
+  <div style="height:0.3rem"></div>
   <div class="book-list" id="book-list"></div>
 </div>
 
@@ -915,6 +931,10 @@
           <option value="Englisch">
           <option value="Italienisch">
         </datalist>
+      </div>
+      <div class="bm-field">
+        <label class="bm-label">Verlag <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="text" id="bm-verlag" class="bm-input" placeholder="z.B. Suhrkamp, dtv…">
       </div>
       <div class="bm-field">
         <label class="bm-label">Quelle / Empfehlung</label>
@@ -1461,26 +1481,31 @@ function getBookProgress(book){
 
 let booksFormatF='all';
 function toggleBooksFormat(f){booksFormatF=f;renderBooks();}
+let booksTypeF='',booksLangF='',booksVerlagF='',booksSourceF='',booksPagesF='',booksAuthorF='';
+let _advOpen=false;
+function toggleAdvFilter(){_advOpen=!_advOpen;document.getElementById('books-adv-panel').style.display=_advOpen?'block':'none';renderBooks();}
+function clearAdvFilter(){booksFormatF='all';booksTypeF='';booksLangF='';booksVerlagF='';booksSourceF='';booksPagesF='';booksAuthorF='';const ai=document.getElementById('books-adv-inner');if(ai)ai.querySelectorAll('select').forEach(s=>s.value='');const inp=document.getElementById('adv-author-input');if(inp)inp.value='';renderBooks();}
+function _advCount(){let n=0;if(booksFormatF!=='all')n++;if(booksTypeF)n++;if(booksLangF)n++;if(booksVerlagF)n++;if(booksSourceF)n++;if(booksPagesF)n++;if(booksAuthorF)n++;return n;}
 
 function langFlag(lang){
   if(!lang)return'';
   const l=lang.toLowerCase();
-  if(l.includes('deutsch')||l.includes('german'))return'🇩🇪';
-  if(l.includes('englisch')||l.includes('english'))return'🇬🇧';
-  if(l.includes('italienisch')||l.includes('italian'))return'🇮🇹';
-  if(l.includes('französisch')||l.includes('french'))return'🇫🇷';
-  if(l.includes('spanisch')||l.includes('spanish'))return'🇪🇸';
-  if(l.includes('portugiesisch')||l.includes('portuguese'))return'🇵🇹';
-  if(l.includes('niederländisch')||l.includes('dutch'))return'🇳🇱';
-  if(l.includes('russisch')||l.includes('russian'))return'🇷🇺';
-  if(l.includes('japanisch')||l.includes('japanese'))return'🇯🇵';
-  if(l.includes('chinesisch')||l.includes('chinese'))return'🇨🇳';
-  if(l.includes('arabisch')||l.includes('arabic'))return'🇸🇦';
-  if(l.includes('polnisch')||l.includes('polish'))return'🇵🇱';
-  if(l.includes('türkisch')||l.includes('turkish'))return'🇹🇷';
-  if(l.includes('schwedisch')||l.includes('swedish'))return'🇸🇪';
-  if(l.includes('norwegisch')||l.includes('norwegian'))return'🇳🇴';
-  if(l.includes('dänisch')||l.includes('danish'))return'🇩🇰';
+  if(l.includes('deutsch')||l.includes('german'))return'de';
+  if(l.includes('englisch')||l.includes('english'))return'gb';
+  if(l.includes('italienisch')||l.includes('italian'))return'it';
+  if(l.includes('französisch')||l.includes('french'))return'fr';
+  if(l.includes('spanisch')||l.includes('spanish'))return'es';
+  if(l.includes('portugiesisch')||l.includes('portuguese'))return'pt';
+  if(l.includes('niederländisch')||l.includes('dutch'))return'nl';
+  if(l.includes('russisch')||l.includes('russian'))return'ru';
+  if(l.includes('japanisch')||l.includes('japanese'))return'jp';
+  if(l.includes('chinesisch')||l.includes('chinese'))return'cn';
+  if(l.includes('arabisch')||l.includes('arabic'))return'sa';
+  if(l.includes('polnisch')||l.includes('polish'))return'pl';
+  if(l.includes('türkisch')||l.includes('turkish'))return'tr';
+  if(l.includes('schwedisch')||l.includes('swedish'))return'se';
+  if(l.includes('norwegisch')||l.includes('norwegian'))return'no';
+  if(l.includes('dänisch')||l.includes('danish'))return'dk';
   return'';
 }
 function starsDisplayHtml(rating){
@@ -1489,7 +1514,7 @@ function starsDisplayHtml(rating){
   for(let i=1;i<=5;i++){
     if(rating>=i)html+='<span class="bsd-star full">★</span>';
     else if(rating>=i-0.5)html+='<span class="bsd-star half">★</span>';
-    else html+='<span class="bsd-star empty">☆</span>';
+    else html+='<span class="bsd-star empty">★</span>';
   }
   return html+'</span>';
 }
@@ -1503,9 +1528,29 @@ function renderBooks(){
   const sf=document.getElementById('books-status-filter');
   if(sf){const statuses=[{v:'all',l:'Alle'},{v:'want_to_read',l:'Merkliste'},{v:'reading',l:'Lese ich'},{v:'done',l:'Gelesen'}];
     sf.innerHTML=statuses.map(s=>`<button class="year-tab ${booksStatusF===s.v?'active':''}" onclick="toggleBooksStatus('${s.v}')">${s.l}</button>`).join('');}
-  const ff=document.getElementById('books-format-filter');
-  if(ff){const formats=[{v:'all',l:'Alle'},{v:'Buch',l:'Buch'},{v:'E-Book',l:'E-Book'},{v:'Hörbuch',l:'Hörbuch'}];
-    ff.innerHTML=formats.map(f=>`<button class="year-tab ${booksFormatF===f.v?'active':''}" onclick="toggleBooksFormat('${f.v}')">${f.l}</button>`).join('');}
+  // Advanced filter panel rendering
+  const advInner=document.getElementById('books-adv-inner');
+  if(advInner&&_advOpen){
+    const uniq=(arr)=>[...new Set(arr.filter(Boolean))].sort();
+    const types=uniq(state.books.map(b=>b.type));
+    const langs=uniq(state.books.map(b=>b.language));
+    const verlags=uniq(state.books.map(b=>b.verlag));
+    const sources=uniq(state.books.map(b=>b.source));
+    const mkSel=(id,label,val,opts,onchange)=>`<div class="adv-filter-cell"><label class="adv-filter-label">${label}</label><select class="adv-filter-select" id="${id}" onchange="${onchange}"><option value="">Alle</option>${opts.map(o=>`<option value="${o}"${val===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
+    const pagesRanges=[{v:'',l:'Alle'},{v:'<200',l:'< 200'},{v:'200-400',l:'200–400'},{v:'400-600',l:'400–600'},{v:'>600',l:'> 600'}];
+    advInner.innerHTML=`<div class="adv-filter-grid">
+      <div class="adv-filter-cell"><label class="adv-filter-label">Autor</label><input class="adv-filter-input" id="adv-author-input" placeholder="Autor…" value="${booksAuthorF.replace(/"/g,'&quot;')}" oninput="booksAuthorF=this.value;renderBooks()"></div>
+      ${mkSel('adv-format-sel','Format',booksFormatF,[{v:'Buch',l:'Buch'},{v:'E-Book',l:'E-Book'},{v:'Hörbuch',l:'Hörbuch'}].map(f=>f.v),'booksFormatF=this.value;renderBooks()')}
+      ${types.length?mkSel('adv-type-sel','Typ',booksTypeF,types,'booksTypeF=this.value;renderBooks()'):''}
+      ${langs.length?mkSel('adv-lang-sel','Sprache',booksLangF,langs,'booksLangF=this.value;renderBooks()'):''}
+      ${verlags.length?mkSel('adv-verlag-sel','Verlag',booksVerlagF,verlags,'booksVerlagF=this.value;renderBooks()'):''}
+      ${sources.length?mkSel('adv-source-sel','Quelle',booksSourceF,sources,'booksSourceF=this.value;renderBooks()'):''}
+    </div>
+    <div style="margin-top:0.5rem"><label class="adv-filter-label">Seitenanzahl</label><div class="adv-pages-row">${pagesRanges.map(r=>`<button class="adv-pages-btn${booksPagesF===r.v?' active':''}" onclick="booksPagesF='${r.v}';renderBooks()">${r.l}</button>`).join('')}</div></div>`;
+  }
+  // Badge count
+  const advBadge=document.getElementById('books-adv-badge');
+  if(advBadge){const n=_advCount();advBadge.textContent=n;advBadge.style.display=n>0?'inline':'none';}
 
   // Status counts (unfiltered)
   const scEl=document.getElementById('books-status-counts');
@@ -1529,6 +1574,12 @@ function renderBooks(){
     if(booksYF.size>0&&!booksYF.has(b.year))return false;
     if(booksStatusF!=='all'&&b.status!==booksStatusF)return false;
     if(booksFormatF!=='all'&&b.format!==booksFormatF)return false;
+    if(booksTypeF&&b.type!==booksTypeF)return false;
+    if(booksLangF&&b.language!==booksLangF)return false;
+    if(booksVerlagF&&b.verlag!==booksVerlagF)return false;
+    if(booksSourceF&&b.source!==booksSourceF)return false;
+    if(booksAuthorF&&!(b.author||'').toLowerCase().includes(booksAuthorF.toLowerCase()))return false;
+    if(booksPagesF){const p=b.pages||0;if(booksPagesF==='<200'&&p>=200)return false;if(booksPagesF==='200-400'&&(p<200||p>400))return false;if(booksPagesF==='400-600'&&(p<400||p>600))return false;if(booksPagesF==='>600'&&p<=600)return false;}
     if(searchQ&&!cap(b.title).toLowerCase().includes(searchQ)&&!(b.author||'').toLowerCase().includes(searchQ))return false;
     return true;
   });
@@ -1606,7 +1657,7 @@ function renderBooks(){
             ${b.type?`<span class="book-type-badge">${b.type}</span>`:''}
             ${avgBadge}
             <span class="book-year-badge">${b.year}</span>
-            ${b.language&&langFlag(b.language)?`<span class="book-lang-flag">${langFlag(b.language)}</span>`:''}
+            ${b.language&&langFlag(b.language)?`<span class="fi fi-${langFlag(b.language)} book-lang-flag"></span>`:''}
           </div>
           ${starsDisplayHtml(b.rating)}
         </div>
@@ -1908,6 +1959,7 @@ function openBookModal(id){
   document.getElementById('bm-edit-type').value=b.type||'';
   document.getElementById('bm-edit-pages').value=b.pages||'';
   document.getElementById('bm-edit-year').value=b.year||'';
+  document.getElementById('bm-verlag').value=b.verlag||'';
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-language').value=b.language||'';
   document.getElementById('bm-cover-url').value=b.cover_url||'';
@@ -1982,6 +2034,7 @@ async function saveBookDetails(){
       year:parseInt(document.getElementById('bm-edit-year').value)||CURRENT_YEAR,
       status:'want_to_read',
       createdAt:new Date().toISOString(),
+      verlag:document.getElementById('bm-verlag').value.trim(),
       source:document.getElementById('bm-source').value.trim(),
       language:document.getElementById('bm-language').value.trim(),
       notes:document.getElementById('bm-notes').value.trim(),
@@ -2008,6 +2061,7 @@ async function saveBookDetails(){
     b.type=document.getElementById('bm-edit-type').value;
     b.pages=parseInt(document.getElementById('bm-edit-pages').value)||b.pages;
     b.year=parseInt(document.getElementById('bm-edit-year').value)||b.year;
+    b.verlag=document.getElementById('bm-verlag').value.trim();
     b.source=document.getElementById('bm-source').value.trim();
     b.language=document.getElementById('bm-language').value.trim();
     b.notes=document.getElementById('bm-notes').value.trim();
