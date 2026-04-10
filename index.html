@@ -323,7 +323,9 @@
   /* Book Detail Modal */
   #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
-  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:1.3rem 1.3rem 2rem;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
+  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;max-height:90dvh;overflow:hidden;display:flex;flex-direction:column;padding:1.3rem 1.3rem 0;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
+  #bm-tab-scroll{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:0.5rem;}
+  #bm-modal-footer{display:flex;gap:0.5rem;justify-content:flex-end;padding:0.6rem 0 1rem;border-top:1px solid var(--border);flex-shrink:0;}
   @media(min-width:560px){#book-modal-panel{border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.16);}}
   @-webkit-keyframes bmFade{from{opacity:0;}to{opacity:1;}}
   @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
@@ -872,6 +874,7 @@
       <button onclick="switchBookModalTab('ki',this)">KI</button>
       <button onclick="switchBookModalTab('verlauf',this)">Verlauf</button>
     </div>
+    <div id="bm-tab-scroll">
     <div id="bmt-stammdaten" class="bm-tab active">
       <div class="bm-field">
         <label class="bm-label">Titel</label>
@@ -948,10 +951,6 @@
         <label class="bm-label">Bewertung</label>
         <div id="bm-stars" class="star-widget"></div>
       </div>
-      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;position:sticky;bottom:0;background:var(--card);padding-top:0.5rem;padding-bottom:0.5rem">
-        <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
-        <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
-      </div>
     </div>
     <div id="bmt-inhalt" class="bm-tab">
       <div class="bm-field">
@@ -984,10 +983,6 @@
           <button class="btn btn-outline btn-sm" style="width:100%" onclick="openKindleImport()">Kindle Highlights importieren</button>
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem;position:sticky;bottom:0;background:var(--card);padding-top:0.5rem;padding-bottom:0.5rem">
-        <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
-        <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
-      </div>
     </div>
     <div id="bmt-ki" class="bm-tab">
       <div class="bm-field">
@@ -1000,6 +995,11 @@
       <div id="bm-verlauf-stats"></div>
       <div id="bm-verlauf-chart-wrap" class="chart-wrap" style="height:155px;margin-bottom:1rem;display:none"><canvas id="bm-chart"></canvas></div>
       <div id="bm-verlauf-timeline"></div>
+    </div>
+    </div><!-- #bm-tab-scroll -->
+    <div id="bm-modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
     </div>
   </div>
 </div>
@@ -1799,7 +1799,7 @@ function renderStats(){
     document.getElementById('stat-types-list').innerHTML=te.map((e,i)=>`
       <div style="display:flex;justify-content:space-between;padding:0.22rem 0;font-size:0.75rem;border-bottom:1px solid var(--cream)">
         <span style="display:flex;align-items:center;gap:0.35rem"><span style="width:8px;height:8px;border-radius:50%;background:${cols[i%cols.length]};display:inline-block;flex-shrink:0"></span>${e[0]}</span>
-        <span style="font-family:'DM Mono',monospace;color:var(--muted)">${e[1]} (${Math.round(e[1]/total*100)}%)</span></div>`).join('');}
+        <span style="font-family:'DM Mono',monospace;color:var(--muted)">${e[1]} (${Math.round(e[1]/te.reduce((s,x)=>s+x[1],0)*100)}%)</span></div>`).join('');}
   const ac={};books.filter(b=>b.author).forEach(b=>{ac[b.author]=(ac[b.author]||0)+1;});
   const ae=Object.entries(ac).sort((a,b)=>b[1]-a[1]).slice(0,10);
   document.getElementById('stat-authors').innerHTML=ae.length
@@ -2932,7 +2932,8 @@ function addMiniLogEntry(){
   panel.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;},{passive:true});
   panel.addEventListener('touchend',e=>{
     const dy=e.changedTouches[0].clientY-startY;
-    if(dy>70&&panel.scrollTop===0)closeBookModal();
+    const scroll=document.getElementById('bm-tab-scroll');
+    if(dy>70&&(!scroll||scroll.scrollTop===0))closeBookModal();
   },{passive:true});
 })();
 
