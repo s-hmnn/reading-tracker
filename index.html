@@ -757,7 +757,7 @@
   </div>
   <div class="two-col">
     <div class="card">
-      <div class="card-title">Buchtypen</div>
+      <div class="card-title">Buchtypen <span style="font-size:0.65rem;font-weight:400;color:var(--muted);font-family:'DM Mono',monospace">gelesene</span></div>
       <div class="chart-wrap" style="height:170px"><canvas id="chart-types"></canvas></div>
       <div id="stat-types-list" style="margin-top:0.6rem"></div>
     </div>
@@ -1787,9 +1787,9 @@ function renderStats(){
   const td=todayStr(),dn=doy(td),tyP=pagesThisYear(CURRENT_YEAR),av=dn>0?Math.round(tyP/dn):0;
   document.getElementById('stat-speed-detail').innerHTML=`
     <div>Ø Seiten/Tag <strong>${av}</strong></div><div>Ø Seiten/Woche <strong>${av*7}</strong></div>
-    <div>Ø Seiten/Monat <strong>${av*30}</strong></div><div>Bücher/Jahr (Ø 350) <strong>${Math.round(av*365/350)}</strong></div>
+    <div>Ø Seiten/Monat <strong>${av*30}</strong></div><div>Bücher/Jahr (Ø 350 S./Buch) <strong>${Math.round(av*365/350)}</strong></div>
     <div style="margin-top:0.6rem;color:var(--muted);font-size:0.7rem">Basis: ${CURRENT_YEAR}, Tag ${dn}</div>`;
-  const tc={};books.forEach(b=>{const t=b.type||'Unbekannt';tc[t]=(tc[t]||0)+1;});
+  const tc={};books.filter(b=>b.status==='done').forEach(b=>{const t=b.type||'Unbekannt';tc[t]=(tc[t]||0)+1;});
   const te=Object.entries(tc).sort((a,b)=>b[1]-a[1]),cols=['#a8c4d8','#b8860b','#c8402a','#4a7c59','#9c6b8a','#5b7fa6','#c8d8c0'];
   destroyChart('types');
   if(te.length){charts['types']=new Chart(document.getElementById('chart-types').getContext('2d'),{type:'doughnut',
