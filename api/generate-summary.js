@@ -14,7 +14,11 @@ module.exports = async function handler(req, res) {
   const { title, author, quotes, notes, keywords, allTitles } = bookData;
   const quotesText = (quotes || []).map(q => `- "${q.text}" (S. ${q.page || '?'})`).join('\n');
 
-  const stripFences = t => t.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'').trim();
+  const extractJSON = t => {
+    const start = t.indexOf('{');
+    const end = t.lastIndexOf('}');
+    return (start !== -1 && end > start) ? t.slice(start, end + 1) : t.trim();
+  };
 
   const callAnthropic = async (model, max_tokens, content) => {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -46,7 +50,7 @@ Antworte NUR mit einem JSON-Objekt ohne Markdown-Fences:
     );
 
     let aiMeta = {};
-    try { aiMeta = JSON.parse(stripFences(metaRaw)); } catch { aiMeta = {}; }
+    try { aiMeta = JSON.parse(extractJSON(metaRaw)); } catch { aiMeta = {}; }
 
     const aiSummaryRaw = await callAnthropic('claude-sonnet-4-6', 1200,
       `Du analysierst "${title}" von ${author || 'unbekannt'} nach Adlers analytischer Lese-Methode.
@@ -66,7 +70,7 @@ Antworte NUR mit diesem JSON (kein Markdown, keine Einleitung):
 Weise treffende Zitate den Themen zu. Identifiziere 4-6 Themen. Pro Thema 1-2 Zitate.`
     );
 
-    const cleanedSummary = stripFences(aiSummaryRaw);
+    const cleanedSummary = extractJSON(aiSummaryRaw);
     JSON.parse(cleanedSummary); // Validierung
     res.json({ aiMeta, aiSummaryRaw: cleanedSummary });
   } catch (e) {
