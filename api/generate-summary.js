@@ -45,8 +45,8 @@ Notizen: ${notes || '(keine)'}
 Keywords: ${(keywords || []).join(', ') || '(keine)'}
 
 Antworte NUR mit diesem JSON (kein Markdown):
-{"kernthese":"1 Satz","zentraleFrage":"1 Satz","tonalitaet":"2-3 Wörter","themen":[{"name":"Thema","beschreibung":"1 Satz","zitat":"Zitattext (S. X)"}]}
-Genau 3 Themen. Pro Thema 1 passendes Zitat aus dem Material.`
+{"kernthese":"1-2 Sätze","zentraleFrage":"1 Satz","tonalitaet":"2-3 Wörter","themen":[{"name":"Thema","beschreibung":"2-3 Sätze","zitat":"Zitattext (S. X)"}]}
+3 Themen wenn wenige Zitate vorhanden, bis zu 5 Themen wenn viele Zitate vorhanden. Pro Thema 1 passendes Zitat aus dem Material.`
     );
 
     const cleanedSummary = extractJSON(raw);
