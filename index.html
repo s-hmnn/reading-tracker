@@ -2507,7 +2507,7 @@ function renderAiSummaryHTML(aiSummary) {
       `<div class="ai-theme-block">
         <div class="ai-theme-name">${t.name}</div>
         <div class="ai-theme-desc">${t.beschreibung}</div>
-        ${(t.zitate||[]).map(z=>`<div class="ai-theme-quote">„${z}"</div>`).join('')}
+        ${(t.zitat?[t.zitat]:(t.zitate||[])).map(z=>`<div class="ai-theme-quote">„${z}"</div>`).join('')}
       </div>`).join('');
     return `<div class="ai-structured">
       <div class="ai-thesis">${d.kernthese}</div>

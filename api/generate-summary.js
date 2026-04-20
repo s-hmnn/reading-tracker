@@ -52,22 +52,17 @@ Antworte NUR mit einem JSON-Objekt ohne Markdown-Fences:
     let aiMeta = {};
     try { aiMeta = JSON.parse(extractJSON(metaRaw)); } catch { aiMeta = {}; }
 
-    const aiSummaryRaw = await callAnthropic('claude-sonnet-4-6', 1200,
-      `Du analysierst "${title}" von ${author || 'unbekannt'} nach Adlers analytischer Lese-Methode.
+    const aiSummaryRaw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
+      `Du analysierst "${title}" von ${author || 'unbekannt'} nach Adlers Lese-Methode.
 
-Voranalyse:
-- Kernthese: ${aiMeta.thesis || '(unbekannt)'}
-- Zentrale Frage: ${aiMeta.centralQuestion || '(unbekannt)'}
-- Tonalität: ${aiMeta.tone || '(unbekannt)'}
-- Themen laut Voranalyse: ${(aiMeta.themes || []).join(', ') || '(keine)'}
-
-Vollständiges Material:
-${quotesText || '(keine Zitate)'}
+Kernthese: ${aiMeta.thesis || '(unbekannt)'}
+Zentrale Frage: ${aiMeta.centralQuestion || '(unbekannt)'}
+Zitate: ${quotesText || '(keine)'}
 Notizen: ${notes || '(keine)'}
 
-Antworte NUR mit diesem JSON (kein Markdown, keine Einleitung):
-{"kernthese":"1-2 Sätze","zentraleFrage":"...","tonalitaet":"...","themen":[{"name":"Thema","beschreibung":"1 Erläuterungssatz","zitate":["Zitattext (S. X)"]}]}
-Weise treffende Zitate den Themen zu. Identifiziere 4-6 Themen. Pro Thema 1-2 Zitate.`
+Antworte NUR mit diesem JSON (kein Markdown):
+{"kernthese":"1 Satz","zentraleFrage":"1 Satz","tonalitaet":"2-3 Wörter","themen":[{"name":"Thema","beschreibung":"1 Satz","zitat":"Zitattext (S. X)"}]}
+Genau 3 Themen. Pro Thema 1 Zitat.`
     );
 
     const cleanedSummary = extractJSON(aiSummaryRaw);
