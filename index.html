@@ -2395,65 +2395,29 @@ async function generateBookSummary(bookId) {
 
   const hasMaterial = (b.quotes||[]).length >= 3 || !!b.notes;
   if (!hasMaterial) { toast('Zu wenig Material'); return; }
-  if (!window._anthropicKey) { toast('API Key nicht gefunden'); return; }
-
   btn.disabled = true;
   btn.textContent = 'Analysiere…';
   display.innerHTML = '<div class="kb-ai-skeleton" style="min-height:60px"></div>';
 
-  const quotesText = (b.quotes||[]).map(q=>`- "${q.text}" (S. ${q.page||'?'})`).join('\n');
   const allTitles = state.books.filter(x=>x.id!==bookId).map(x=>x.title).join(', ');
 
   try {
-    // Step 1: Haiku → Metadaten
-    const metaPrompt = `Du analysierst das Buch "${b.title}" von ${b.author||'unbekannt'}.
-
-Zitate:
-${quotesText||'(keine)'}
-Notizen: ${b.notes||'(keine)'}
-Keywords: ${(b.keywords||[]).join(', ')||'(keine)'}
-Andere Bücher in der Bibliothek: ${allTitles||'(keine)'}
-
-Antworte NUR mit einem JSON-Objekt ohne Markdown-Fences:
-{"thesis":"Kernthese 1-2 Sätze","themes":["Thema1","Thema2"],"tone":"Tonalität","centralQuestion":"Zentrale Frage","relatedBooks":["Buchtitel aus Bibliothek die passen"]}`;
-
-    const metaRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'x-api-key':window._anthropicKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-allow-browser':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:metaPrompt}]})
+    const r = await fetch('https://DEIN-PROJEKT.vercel.app/api/generate-summary', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bookData: {
+        title: b.title,
+        author: b.author || 'unbekannt',
+        quotes: b.quotes || [],
+        notes: b.notes || '',
+        keywords: b.keywords || [],
+        allTitles
+      }})
     });
-    if (!metaRes.ok) { const err=await metaRes.json(); throw new Error(err.error?.message||metaRes.status); }
-    const metaData = await metaRes.json();
-    let aiMeta = {};
-    try { aiMeta = JSON.parse(metaData.content[0].text); } catch { aiMeta = {}; }
+    if (!r.ok) { const err = await r.json(); throw new Error(err.error || r.status); }
+    const { aiMeta, aiSummaryRaw } = await r.json();
     b.aiMeta = aiMeta;
-
-    // Step 2: Sonnet → Strukturanalyse (Adler)
-    const summaryPrompt = `Du analysierst "${b.title}" von ${b.author||'unbekannt'} nach Adlers analytischer Lese-Methode.
-
-Voranalyse:
-- Kernthese: ${aiMeta.thesis||'(unbekannt)'}
-- Zentrale Frage: ${aiMeta.centralQuestion||'(unbekannt)'}
-- Tonalität: ${aiMeta.tone||'(unbekannt)'}
-- Themen laut Voranalyse: ${(aiMeta.themes||[]).join(', ')||'(keine)'}
-
-Vollständiges Material:
-${quotesText||'(keine Zitate)'}
-Notizen: ${b.notes||'(keine)'}
-
-Antworte NUR mit diesem JSON (kein Markdown, keine Einleitung):
-{"kernthese":"1-2 Sätze","zentraleFrage":"...","tonalitaet":"...","themen":[{"name":"Thema","beschreibung":"1 Erläuterungssatz","zitate":["Zitattext (S. X)"]}]}
-Weise treffende Zitate den Themen zu. Identifiziere 4-6 Themen. Pro Thema 1-2 Zitate.`;
-
-    const summaryRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'x-api-key':window._anthropicKey,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-allow-browser':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:summaryPrompt}]})
-    });
-    if (!summaryRes.ok) { const err=await summaryRes.json(); throw new Error(err.error?.message||summaryRes.status); }
-    const summaryData = await summaryRes.json();
-    const rawText = summaryData.content[0].text;
-    JSON.parse(rawText); // Validierung
+    const rawText = aiSummaryRaw;
     b.aiSummary = rawText;
     b.aiSummaryDate = Date.now();
     save();
