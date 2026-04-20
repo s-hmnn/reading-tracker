@@ -119,6 +119,8 @@
     }
     window._firebaseReady=true;
     window.initApp();
+    registerUserProfile().catch(()=>{});
+    loadFriendsAndData().catch(()=>{});
   }
 
   function startRealtimeSync(){
@@ -161,10 +163,49 @@
   window.signOutUser = async function(){
     window._firebaseReady = false;
     currentUser = null;
+    window._friends = [];
+    window._friendState = null;
     await signOut(auth);
     document.getElementById('app').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-error').textContent = '';
+  };
+
+  // ── Friend functions ──────────────────────────────────────
+  async function registerUserProfile(){
+    if(!currentUser) return;
+    try{
+      await set(ref(db,`userProfiles/${currentUser.uid}`),{
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+        photoURL: currentUser.photoURL || ''
+      });
+    } catch(e){ console.warn('Profile registration failed:',e.message); }
+  }
+
+  async function loadFriendsAndData(){
+    try{
+      const snap=await get(ref(db,'userProfiles'));
+      if(!snap.exists()){window._friends=[];return;}
+      const profiles=snap.val();
+      window._friends=Object.entries(profiles)
+        .filter(([uid])=>uid!==currentUser.uid)
+        .map(([uid,p])=>({uid,...p}));
+      if(window._friends.length){
+        const dSnap=await get(ref(db,`users/${window._friends[0].uid}/tracker`));
+        window._friendState=dSnap.exists()?sanitizeState(dSnap.val()):null;
+      }
+    } catch(e){ console.warn('loadFriendsAndData failed:',e.message); }
+    if(window.onFriendDataLoaded) window.onFriendDataLoaded();
+  }
+
+  window.refreshFriendData=async function(){
+    if(!currentUser||!window._friends||!window._friends.length)return;
+    try{
+      const dSnap=await get(ref(db,`users/${window._friends[0].uid}/tracker`));
+      window._friendState=dSnap.exists()?sanitizeState(dSnap.val()):null;
+    } catch(e){ console.warn('refreshFriendData failed:',e.message); }
+    if(window.onFriendDataLoaded) window.onFriendDataLoaded();
   };
 
   const functions = getFunctions(app, 'europe-west1');
@@ -536,6 +577,28 @@
   /* ── Pull-to-refresh indicator ── */
   #ptr-indicator{position:fixed;top:60px;left:50%;-webkit-transform:translateX(-50%) translateY(-60px);transform:translateX(-50%) translateY(-60px);z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 14px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);-webkit-transition:-webkit-transform 0.2s;transition:transform 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
   #ptr-indicator.ptr-ready{color:var(--sky-dark);}
+  /* ── Friends ── */
+  .friend-header{display:flex;align-items:center;gap:0.9rem;margin-bottom:1.3rem;margin-top:0.4rem;}
+  .friend-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--sky-100);border:2px solid var(--sky-200);}
+  .friend-avatar-placeholder{width:44px;height:44px;border-radius:50%;background:var(--sky-100);border:2px solid var(--sky-200);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+  .friend-name{font-size:15px;font-weight:500;color:var(--text-primary);}
+  .friend-email{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;}
+  .friend-section-label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;}
+  .friend-book-card{display:flex;align-items:center;gap:0.7rem;padding:0.55rem 0.85rem;border-bottom:1px solid var(--slate-100);}
+  .friend-book-card:last-child{border-bottom:none;}
+  .friend-book-cover{width:32px;height:44px;border-radius:4px;object-fit:cover;background:var(--sky-50);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+  .friend-book-cover img{width:100%;height:100%;object-fit:cover;border-radius:3px;}
+  .friend-book-info{flex:1;min-width:0;}
+  .friend-book-title{font-size:0.85rem;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .friend-book-author{font-size:0.72rem;color:var(--text-muted);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .friend-book-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.2rem;flex-shrink:0;}
+  #friend-activity-today{margin-top:1.3rem;}
+  .friend-today-header{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;}
+  .friend-today-avatar{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--sky-100);}
+  .friend-lib-filter{display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:0.65rem;}
+  .friend-book-card.done{background:#f0f7f4;}
+  .friend-book-card.reading{background:var(--sky-light);}
+  .friend-book-cover img{width:32px;height:44px;border-radius:3px;object-fit:cover;}
 </style>
 </head>
 <body>
@@ -574,6 +637,7 @@
     <button onclick="switchTab('books',this)">Bücher</button>
     <button onclick="switchTab('stats',this)">Statistiken</button>
     <button onclick="switchTab('kb',this)">Wissen</button>
+    <button onclick="switchTab('friends',this)">Freunde</button>
   </nav>
   <div id="topbar-right">
     <div id="sync-status"></div>
@@ -635,6 +699,30 @@
     </table>
     </div>
     <div class="empty" id="log-empty" style="display:none;padding:0 14px">Noch keine Einträge</div>
+  </div>
+  <!-- Friend activity section -->
+  <div id="friend-activity-today" style="display:none">
+    <div class="section-title" style="margin-top:1.3rem">
+      <div class="friend-today-header">
+        <img id="friend-today-avatar" class="friend-today-avatar" alt="" src="">
+        <span id="friend-today-name">Freund</span> — letzte Einträge
+      </div>
+    </div>
+    <div class="card" style="padding-left:0;padding-right:0">
+      <div class="log-table-wrap">
+      <table class="log-table">
+        <colgroup>
+          <col style="width:62px">
+          <col>
+          <col style="width:52px">
+          <col class="col-pos" style="width:60px">
+        </colgroup>
+        <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Δ&nbsp;S.</th><th class="th-pos" style="text-align:right">Position</th></tr></thead>
+        <tbody id="friend-today-log-body"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="friend-today-log-empty" style="display:none;padding:0 14px">Keine Einträge</div>
+    </div>
   </div>
 </div>
 
@@ -785,6 +873,49 @@
   <div class="card" id="stat-speed-by-type"></div>
 </div>
 
+<!-- FREUNDE -->
+<div id="tab-friends" class="tab-content">
+  <div id="friends-loading" style="padding:3rem;text-align:center;color:var(--text-muted);font-size:13px">
+    <div class="spinner" style="margin:0 auto 1rem"></div>
+    Lade Freundesdaten…
+  </div>
+  <div id="friends-content" style="display:none">
+    <div class="friend-header">
+      <img id="friend-avatar" class="friend-avatar" alt="" style="display:none">
+      <div id="friend-avatar-placeholder" class="friend-avatar-placeholder">👤</div>
+      <div>
+        <div class="friend-name" id="friend-name">—</div>
+        <div class="friend-email" id="friend-email">—</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="window.refreshFriendData&&window.refreshFriendData()" style="margin-left:auto" title="Aktualisieren">↻</button>
+    </div>
+    <div class="section-title">Letzte Aktivität</div>
+    <div class="card" style="padding-left:0;padding-right:0;margin-bottom:1.5rem">
+      <div class="log-table-wrap">
+      <table class="log-table">
+        <colgroup>
+          <col style="width:62px">
+          <col>
+          <col style="width:52px">
+          <col class="col-pos" style="width:60px">
+        </colgroup>
+        <thead><tr><th>Datum</th><th>Buch</th><th style="text-align:right">Δ&nbsp;S.</th><th class="th-pos" style="text-align:right">Position</th></tr></thead>
+        <tbody id="friend-tab-log-body"></tbody>
+      </table>
+      </div>
+      <div class="empty" id="friend-tab-log-empty" style="display:none;padding:0 14px">Keine Einträge vorhanden</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem">
+      <div class="section-title" style="margin:0;border:none;padding:0">Bibliothek</div>
+      <div class="friend-lib-filter" id="friend-lib-filter"></div>
+    </div>
+    <div id="friend-book-list"></div>
+  </div>
+  <div id="friends-no-data" style="display:none;padding:3rem;text-align:center;color:var(--text-muted);font-size:13px">
+    Noch keine Freundesdaten verfügbar.<br><span style="font-size:11px">Dein Freund muss sich zuerst einloggen.</span>
+  </div>
+</div>
+
 <!-- KNOWLEDGE BASE -->
 <div id="tab-kb" class="tab-content">
   <div class="kb-layout">
@@ -831,6 +962,10 @@
   <button class="bn-btn" onclick="switchTab('kb',this)" data-tab="kb">
     <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     <span>Wissen</span>
+  </button>
+  <button class="bn-btn" onclick="switchTab('friends',this)" data-tab="friends">
+    <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+    <span>Freunde</span>
   </button>
 </nav>
 
@@ -1088,7 +1223,7 @@ function switchTab(tab,btn){
   if(btn)btn.classList.add('active');
   document.title=TAB_TITLES[tab]||'Crescendo';
   document.querySelectorAll('.bn-btn[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  if(tab==='kb')renderKB();else refreshAll();
+  if(tab==='kb')renderKB();else if(tab==='friends')renderFriendTab();else refreshAll();
 }
 
 let positionMode='page'; // 'page' | 'percent'
@@ -2631,7 +2766,7 @@ function deleteConcept(id){
 }
 // ── End Knowledge Base ────────────────────────────────────
 
-window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();checkYesterdayBanner()};
+window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();checkYesterdayBanner();renderFriendActivityToday();};
 
 window.initApp=function(){
   document.getElementById('loading-screen').style.display='none';
@@ -2666,7 +2801,7 @@ window.addEventListener('online',()=>{
 });
 
 // ── Browser title map ─────────────────────────────────────
-const TAB_TITLES={today:'Crescendo · Heute',goal:'Crescendo · Ziel',books:'Crescendo · Bücher',stats:'Crescendo · Statistiken',kb:'Crescendo · Wissen'};
+const TAB_TITLES={today:'Crescendo · Heute',goal:'Crescendo · Ziel',books:'Crescendo · Bücher',stats:'Crescendo · Statistiken',kb:'Crescendo · Wissen',friends:'Crescendo · Freunde'};
 function switchTabExtra(tab){
   const topBtn=document.querySelector(`#topbar-nav button[onclick*="'${tab}'"]`);
   switchTab(tab,topBtn);
@@ -2839,7 +2974,7 @@ function addMiniLogEntry(){
 
 // ── Tab swipe gestures ────────────────────────────────────
 (function(){
-  const TAB_ORDER=['today','goal','books','stats','kb'];
+  const TAB_ORDER=['today','goal','books','stats','kb','friends'];
   let tx=0,ty=0;
   const mainEl=document.querySelector('main')||document.body;
   mainEl.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
@@ -3278,6 +3413,173 @@ window._importStefanHistory = async function(){
   alert(`✓ ${toAdd.length} Bücher + ${logsAdded} Log-Einträge importiert.\n${BOOKS.length-toAdd.length} bereits vorhanden und übersprungen.\n\nHinweis: Bitte Singularitäten, Polarisierung, Was wir wissen könnten, Nelio Biedermann Lazar manuell prüfen (Autor/Seiten unbekannt).`);
 };
 // ── End historischer Import Stefan ────────────────────────────────────────
+
+// ── Friends ───────────────────────────────────────────────────────────────
+window._friends = window._friends || [];
+window._friendState = window._friendState || null;
+let _friendLibFilter = 'all';
+
+window.onFriendDataLoaded = function(){
+  renderFriendActivityToday();
+  const active = document.querySelector('.tab-content.active');
+  if(active && active.id === 'tab-friends') renderFriendTab();
+};
+
+function buildFriendLogs(){
+  if(!window._friendState) return [];
+  const fs = window._friendState;
+  const mergedMap = {};
+  [...(fs.logs||[])].sort((a,b)=>a.date.localeCompare(b.date)||(a.id-b.id)).forEach(l=>{
+    const key = `${l.date}|${l.bookId}`;
+    if(!mergedMap[key]){ mergedMap[key]={...l}; }
+    else{ mergedMap[key].pages=(mergedMap[key].pages||0)+(l.pages||0); mergedMap[key].currentPosition=l.currentPosition; mergedMap[key].positionType=l.positionType; }
+  });
+  return Object.values(mergedMap).sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function renderFriendLogRows(logs, limit){
+  const rows = limit ? logs.slice(0,limit) : logs;
+  if(!rows.length) return null;
+  return rows.map(l=>{
+    const posCell = l.currentPosition!=null ? `${l.currentPosition}${l.positionType==='percent'?'%':'\u00a0S.'}` : '\u2014';
+    const dd = l.date.slice(8,10)+'.'+l.date.slice(5,7)+'.';
+    return`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:0.73rem;padding-left:8px;padding-right:4px">${dd}</td>
+      <td title="${cap(l.bookTitle)}">${cap(l.bookTitle)}</td>
+      <td style="font-family:'DM Mono',monospace;text-align:right">${l.pages||0}</td>
+      <td class="col-pos" style="font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-size:0.7rem">${posCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderFriendActivityToday(){
+  const section = document.getElementById('friend-activity-today');
+  if(!section) return;
+  const friend = window._friends && window._friends[0];
+  if(!friend || !window._friendState){
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  const avatarEl = document.getElementById('friend-today-avatar');
+  if(avatarEl){ if(friend.photoURL){ avatarEl.src=friend.photoURL; avatarEl.style.display='block'; } else avatarEl.style.display='none'; }
+  const nameEl = document.getElementById('friend-today-name');
+  if(nameEl) nameEl.textContent = friend.displayName || friend.email.split('@')[0];
+
+  const logs = buildFriendLogs();
+  const tbody = document.getElementById('friend-today-log-body');
+  const empty = document.getElementById('friend-today-log-empty');
+  const html = renderFriendLogRows(logs, 10);
+  if(!html){ tbody.innerHTML=''; empty.style.display='block'; }
+  else{ tbody.innerHTML=html; empty.style.display='none'; }
+}
+
+function renderFriendTab(){
+  const loading = document.getElementById('friends-loading');
+  const content = document.getElementById('friends-content');
+  const noData = document.getElementById('friends-no-data');
+  if(!loading||!content||!noData) return;
+
+  const friend = window._friends && window._friends[0];
+  if(!friend){
+    loading.style.display='none'; content.style.display='none'; noData.style.display='block';
+    return;
+  }
+
+  // Set profile
+  const avatar = document.getElementById('friend-avatar');
+  const placeholder = document.getElementById('friend-avatar-placeholder');
+  if(friend.photoURL){
+    avatar.src=friend.photoURL; avatar.style.display='block';
+    if(placeholder) placeholder.style.display='none';
+  } else {
+    if(avatar) avatar.style.display='none';
+    if(placeholder) placeholder.style.display='flex';
+  }
+  const nameEl=document.getElementById('friend-name');
+  const emailEl=document.getElementById('friend-email');
+  if(nameEl) nameEl.textContent=friend.displayName||friend.email.split('@')[0];
+  if(emailEl) emailEl.textContent=friend.email;
+
+  if(!window._friendState){
+    loading.style.display='none'; content.style.display='none'; noData.style.display='block';
+    return;
+  }
+
+  loading.style.display='none'; noData.style.display='none'; content.style.display='block';
+
+  // Recent activity log
+  const logs = buildFriendLogs();
+  const tbody = document.getElementById('friend-tab-log-body');
+  const empty = document.getElementById('friend-tab-log-empty');
+  const html = renderFriendLogRows(logs, 10);
+  if(!html){ tbody.innerHTML=''; empty.style.display='block'; }
+  else{ tbody.innerHTML=html; empty.style.display='none'; }
+
+  // Library filter buttons
+  const filterEl = document.getElementById('friend-lib-filter');
+  if(filterEl){
+    const statuses=[{v:'all',l:'Alle'},{v:'reading',l:'Lese ich'},{v:'done',l:'Gelesen'},{v:'want_to_read',l:'Merkliste'}];
+    filterEl.innerHTML=statuses.map(s=>`<button class="year-tab ${_friendLibFilter===s.v?'active':''}" onclick="_friendLibFilter='${s.v}';renderFriendLibrary()">${s.l}</button>`).join('');
+  }
+  renderFriendLibrary();
+}
+
+function renderFriendLibrary(){
+  const list = document.getElementById('friend-book-list');
+  if(!list||!window._friendState) return;
+
+  // Update filter button states
+  const filterEl = document.getElementById('friend-lib-filter');
+  if(filterEl) filterEl.querySelectorAll('.year-tab').forEach(b=>{
+    b.classList.toggle('active', b.textContent==='Alle'&&_friendLibFilter==='all'
+      || b.textContent==='Lese ich'&&_friendLibFilter==='reading'
+      || b.textContent==='Gelesen'&&_friendLibFilter==='done'
+      || b.textContent==='Merkliste'&&_friendLibFilter==='want_to_read');
+  });
+
+  const fs = window._friendState;
+  const statusOrder = {reading:0,want_to_read:1,done:2};
+  let books = [...(fs.books||[])];
+  if(_friendLibFilter!=='all') books=books.filter(b=>b.status===_friendLibFilter);
+  books.sort((a,b)=>(statusOrder[a.status]??1)-(statusOrder[b.status]??1)||b.year-a.year||a.title.localeCompare(b.title));
+
+  if(!books.length){ list.innerHTML='<div class="empty">Keine Bücher in dieser Kategorie</div>'; return; }
+
+  const statusLabel={reading:'Lese ich',want_to_read:'Merkliste',done:'Gelesen'};
+  const starsHtml=(r)=>{
+    if(!r) return '';
+    let s='';for(let i=1;i<=5;i++){if(r>=i)s+=`<span class="bsd-star full">★</span>`;else if(r>=i-0.5)s+=`<span class="bsd-star half">★</span>`;else s+=`<span class="bsd-star" style="color:var(--border)">★</span>`;}
+    return `<div class="book-stars-display">${s}</div>`;
+  };
+  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
+
+  let lastGroup='';
+  list.innerHTML=books.map(b=>{
+    let groupHeader='';
+    if(_friendLibFilter==='all'&&b.status!==lastGroup){
+      const count=books.filter(x=>x.status===b.status).length;
+      groupHeader=`<div class="book-group-header">${statusLabel[b.status]||b.status} (${count})</div>`;
+      lastGroup=b.status;
+    }
+    const coverEl=b.cover_url?`<img src="${b.cover_url}" alt="" loading="lazy">`:`<span style="opacity:0.35;font-size:1rem">📖</span>`;
+    const statusClass=b.status==='done'?'done':b.status==='reading'?'reading':'';
+    return`${groupHeader}<div class="friend-book-card ${statusClass}">
+      <div class="friend-book-cover">${coverEl}</div>
+      <div class="friend-book-info">
+        <div class="friend-book-title">${cap(b.title)}</div>
+        ${b.author?`<div class="friend-book-author">${b.author}</div>`:''}
+        ${b.notes?`<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.notes}</div>`:''}
+      </div>
+      <div class="friend-book-right">
+        ${sBadge(b.status)}
+        ${starsHtml(b.rating)}
+        ${b.pages?`<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-muted)">${b.pages} S.</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+// ── End Friends ───────────────────────────────────────────────────────────
 
 </script>
 </body>

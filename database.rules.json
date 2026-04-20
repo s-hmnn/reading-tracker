@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        "tracker": {
+          ".read": "auth != null",
+          ".write": "auth.uid === $uid"
+        }
+      }
+    },
+    "userProfiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth.uid === $uid"
+      }
+    },
+    "tracker": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "feedback": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": false
+    }
+  }
+}
