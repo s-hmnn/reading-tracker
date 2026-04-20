@@ -2402,7 +2402,7 @@ async function generateBookSummary(bookId) {
   const allTitles = state.books.filter(x=>x.id!==bookId).map(x=>x.title).join(', ');
 
   try {
-    const r = await fetch('https://DEIN-PROJEKT.vercel.app/api/generate-summary', {
+    const r = await fetch('https://reading-tracker-puce.vercel.app/api/generate-summary', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ bookData: {
