@@ -36,38 +36,22 @@ module.exports = async function handler(req, res) {
   };
 
   try {
-    const metaRaw = await callAnthropic('claude-haiku-4-5-20251001', 500,
-      `Du analysierst das Buch "${title}" von ${author || 'unbekannt'}.
+    const raw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
+      `Analysiere "${title}" von ${author || 'unbekannt'} nach Adlers Lese-Methode.
 
 Zitate:
 ${quotesText || '(keine)'}
 Notizen: ${notes || '(keine)'}
 Keywords: ${(keywords || []).join(', ') || '(keine)'}
-Andere Bücher in der Bibliothek: ${allTitles || '(keine)'}
-
-Antworte NUR mit einem JSON-Objekt ohne Markdown-Fences:
-{"thesis":"Kernthese 1-2 Sätze","themes":["Thema1","Thema2"],"tone":"Tonalität","centralQuestion":"Zentrale Frage","relatedBooks":["Buchtitel aus Bibliothek die passen"]}`
-    );
-
-    let aiMeta = {};
-    try { aiMeta = JSON.parse(extractJSON(metaRaw)); } catch { aiMeta = {}; }
-
-    const aiSummaryRaw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
-      `Du analysierst "${title}" von ${author || 'unbekannt'} nach Adlers Lese-Methode.
-
-Kernthese: ${aiMeta.thesis || '(unbekannt)'}
-Zentrale Frage: ${aiMeta.centralQuestion || '(unbekannt)'}
-Zitate: ${quotesText || '(keine)'}
-Notizen: ${notes || '(keine)'}
 
 Antworte NUR mit diesem JSON (kein Markdown):
 {"kernthese":"1 Satz","zentraleFrage":"1 Satz","tonalitaet":"2-3 Wörter","themen":[{"name":"Thema","beschreibung":"1 Satz","zitat":"Zitattext (S. X)"}]}
-Genau 3 Themen. Pro Thema 1 Zitat.`
+Genau 3 Themen. Pro Thema 1 passendes Zitat aus dem Material.`
     );
 
-    const cleanedSummary = extractJSON(aiSummaryRaw);
+    const cleanedSummary = extractJSON(raw);
     JSON.parse(cleanedSummary); // Validierung
-    res.json({ aiMeta, aiSummaryRaw: cleanedSummary });
+    res.json({ aiMeta: {}, aiSummaryRaw: cleanedSummary });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
