@@ -210,20 +210,20 @@
 
   const functions = getFunctions(app, 'europe-west1');
 
-  window.submitFeedback = async function(){
+  window.submitFeedback = function(){
     const text=document.getElementById('feedback-text').value.trim();
     const subject=document.getElementById('feedback-subject').value.trim();
     const category=document.getElementById('feedback-category').value;
     if(!text){window.toast('Bitte Feedback eingeben','error');return;}
-    try{
-      const r=await fetch('/api/send-feedback',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text,subject,category,userEmail:currentUser?.email||''})});
-      if(!r.ok)throw new Error();
-      document.getElementById('feedback-modal').style.display='none';
-      window.toast('Danke für dein Feedback! ✓','success');
-    }catch(err){
-      window.toast('Fehler beim Senden','error');
-    }
+    const mailSubject=encodeURIComponent(
+      subject?`Crescendo Feedback [${category}]: ${subject}`:`Crescendo Feedback [${category}]`
+    );
+    const mailBody=encodeURIComponent(
+      `Von: ${currentUser?.email||'unbekannt'}\nKategorie: ${category}\n\n${text}`
+    );
+    window.location.href=`mailto:stefan.a.hartmann@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+    document.getElementById('feedback-modal').style.display='none';
+    window.toast('Mailprogramm wird geöffnet…','success');
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -329,9 +329,11 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   #loading-screen p{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
   @keyframes logoPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
-  @keyframes logoZoomIn{from{transform:scale(1);opacity:1;}to{transform:scale(1.7);opacity:0;}}
+  @keyframes logoZoomIn{0%{transform:scale(1);opacity:1;}65%{transform:scale(4);opacity:1;}100%{transform:scale(6);opacity:0;}}
+  @keyframes screenFadeOut{0%{opacity:1;}55%{opacity:1;}100%{opacity:0;}}
   .logo-pulse{animation:logoPulse 1.6s ease-in-out infinite;}
-  .logo-zoom-in{animation:logoZoomIn 0.4s ease-in forwards;}
+  .logo-zoom-in{animation:logoZoomIn 0.75s cubic-bezier(0.4,0,1,1) forwards;}
+  .screen-fade-out{animation:screenFadeOut 0.75s ease-in forwards;pointer-events:none;}
   #offline-banner{display:none;background:#FEF3C7;border-bottom:1px solid #F59E0B;padding:8px 16px;text-align:center;font-size:12px;color:#92400E;letter-spacing:0.04em;}
   /* ── Top Navigation Bar ── */
   
@@ -3067,14 +3069,17 @@ window.initApp=function(){
     const name = (window._currentUserDisplayName || '');
     window._setGreetingName(name);
   }
-  const _logo=document.querySelector('#loading-screen img');
+  const _ls=document.getElementById('loading-screen');
+  const _logo=_ls.querySelector('img');
   _logo.classList.remove('logo-pulse');
   _logo.classList.add('logo-zoom-in');
+  _ls.classList.add('screen-fade-out');
   setTimeout(()=>{
-    document.getElementById('loading-screen').style.display='none';
+    _ls.style.display='none';
+    _ls.classList.remove('screen-fade-out');
     _logo.classList.remove('logo-zoom-in');
     _logo.classList.add('logo-pulse');
-  },420);
+  },780);
   document.getElementById('app').style.display='block';
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
