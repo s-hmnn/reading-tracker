@@ -1750,7 +1750,11 @@ function renderActiveBookBanner(){
   if(!banner || !window._state) return;
   var reading = state.books.filter(function(b){ return b.status === 'reading'; });
   if(!reading.length){ banner.style.display='none'; return; }
-  var b = reading[0];
+  var b = reading.reduce(function(best,book){
+    var lastLog=state.logs.filter(function(l){return l.bookId===book.id;}).map(function(l){return l.date;}).sort().pop()||'';
+    var bestLog=state.logs.filter(function(l){return l.bookId===best.id;}).map(function(l){return l.date;}).sort().pop()||'';
+    return lastLog>bestLog?book:best;
+  },reading[0]);
   var prog = getBookProgress(b);
   var pct = prog ? prog.pct : 0;
   var label = prog ? prog.label : 'S. 0';
