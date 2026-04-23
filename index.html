@@ -210,20 +210,20 @@
 
   const functions = getFunctions(app, 'europe-west1');
 
-  window.submitFeedback = async function(){
+  window.submitFeedback = function(){
     const text=document.getElementById('feedback-text').value.trim();
     const subject=document.getElementById('feedback-subject').value.trim();
     const category=document.getElementById('feedback-category').value;
     if(!text){window.toast('Bitte Feedback eingeben','error');return;}
-    try{
-      const r=await fetch('/api/send-feedback',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text,subject,category,userEmail:currentUser?.email||''})});
-      if(!r.ok)throw new Error();
-      document.getElementById('feedback-modal').style.display='none';
-      window.toast('Danke für dein Feedback! ✓','success');
-    }catch(err){
-      window.toast('Fehler beim Senden','error');
-    }
+    const mailSubject=encodeURIComponent(
+      subject?`Crescendo Feedback [${category}]: ${subject}`:`Crescendo Feedback [${category}]`
+    );
+    const mailBody=encodeURIComponent(
+      `Von: ${currentUser?.email||'unbekannt'}\nKategorie: ${category}\n\n${text}`
+    );
+    window.location.href=`mailto:stefan.a.hartmann@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+    document.getElementById('feedback-modal').style.display='none';
+    window.toast('Mailprogramm wird geöffnet…','success');
   };
 
   document.addEventListener('DOMContentLoaded', () => {
