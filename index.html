@@ -216,7 +216,9 @@
     const category=document.getElementById('feedback-category').value;
     if(!text){window.toast('Bitte Feedback eingeben','error');return;}
     try{
-      await httpsCallable(functions,'sendFeedback')({text,subject,category});
+      const r=await fetch('/api/send-feedback',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text,subject,category,userEmail:currentUser?.email||''})});
+      if(!r.ok)throw new Error();
       document.getElementById('feedback-modal').style.display='none';
       window.toast('Danke für dein Feedback! ✓','success');
     }catch(err){
