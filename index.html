@@ -212,9 +212,11 @@
 
   window.submitFeedback = async function(){
     const text=document.getElementById('feedback-text').value.trim();
+    const subject=document.getElementById('feedback-subject').value.trim();
+    const category=document.getElementById('feedback-category').value;
     if(!text){window.toast('Bitte Feedback eingeben','error');return;}
     try{
-      await httpsCallable(functions,'sendFeedback')({text});
+      await httpsCallable(functions,'sendFeedback')({text,subject,category});
       document.getElementById('feedback-modal').style.display='none';
       window.toast('Danke für dein Feedback! ✓','success');
     }catch(err){
@@ -260,6 +262,10 @@
   .spinner{width:36px;height:36px;border:3px solid var(--sky-200);border-top-color:var(--sky-500);border-radius:50%;animation:spin 0.8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #loading-screen p{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
+  @keyframes logoPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+  @keyframes logoZoomIn{from{transform:scale(1);opacity:1;}to{transform:scale(1.7);opacity:0;}}
+  .logo-pulse{animation:logoPulse 1.6s ease-in-out infinite;}
+  .logo-zoom-in{animation:logoZoomIn 0.4s ease-in forwards;}
   #offline-banner{display:none;background:#FEF3C7;border-bottom:1px solid #F59E0B;padding:8px 16px;text-align:center;font-size:12px;color:#92400E;letter-spacing:0.04em;}
   /* ── Top Navigation Bar ── */
   #topbar{position:sticky;top:0;z-index:100;height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
@@ -621,7 +627,7 @@
 </div>
 
 <div id="loading-screen">
-  <img src="logo_aktuell.png" alt="Crescendo" style="width:80px;height:80px;object-fit:contain;margin-bottom:8px;">
+  <img src="logo_aktuell.png" alt="Crescendo" class="logo-pulse" style="width:140px;height:140px;object-fit:contain;margin-bottom:8px;">
   <div class="spinner"></div>
   <p>Verbinde mit Firebase…</p>
 </div>
@@ -1180,7 +1186,17 @@
       <button class="btn btn-outline btn-sm" onclick="closeFeedback()">✕</button>
     </div>
     <p style="font-size:0.78rem;color:var(--muted);margin:0 0 0.9rem;line-height:1.5">Was kann verbessert werden? Ideen, Bugs, Wünsche – alles willkommen.</p>
-    <textarea id="feedback-text" class="bm-input" rows="5" style="width:100%;resize:vertical;box-sizing:border-box" placeholder="Dein Feedback…"></textarea>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
+      <select id="feedback-category" class="bm-input" style="flex:0 0 auto;width:auto;font-family:'DM Mono',monospace;font-size:0.82rem">
+        <option value="Lob">Lob</option>
+        <option value="Verbesserungsvorschlag" selected>Verbesserungsvorschlag</option>
+        <option value="Kritik">Kritik</option>
+        <option value="Fehlermeldung (Bug)">Fehlermeldung (Bug)</option>
+        <option value="Sonstiges">Sonstiges</option>
+      </select>
+      <input id="feedback-subject" class="bm-input" type="text" style="flex:1;font-family:'DM Mono',monospace;font-size:0.82rem" placeholder="Betreff…">
+    </div>
+    <textarea id="feedback-text" class="bm-input" rows="4" style="width:100%;resize:vertical;box-sizing:border-box" placeholder="Dein Feedback…"></textarea>
     <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
       <button class="btn btn-outline btn-sm" onclick="closeFeedback()">Abbrechen</button>
       <button class="btn btn-primary btn-sm" onclick="submitFeedback()">Senden</button>
@@ -1858,31 +1874,46 @@ function renderYearCharts(){
   charts['books-per-year']=new Chart(document.getElementById('chart-books-per-year').getContext('2d'),{type:'bar',
     data:{labels:dY.map(String),datasets:[{data:books,backgroundColor:bc,borderRadius:3}]},
     options:{...CD,scales:{...CD.scales,y:{...CD.scales.y,beginAtZero:true}}}});
-  // Kumulativer Fortschritt nach Monat – nutzt selSY (globaler Jahresfilter)
-  const months=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  // Kumulativer Fortschritt nach Tag – nutzt selSY (globaler Jahresfilter)
   const mY=selSY.size===0?years:years.filter(y=>selSY.has(y));
   const lc=['#c8402a','#b8860b','#4a7c59','#5b7fa6','#9c6b8a'];
-  const nowMonth=new Date().getMonth(); // 0-indexed
-  const nowYear=new Date().getFullYear();
-  const mDs=mY.map((y,i)=>{
+  const _now=new Date(),nowYear=_now.getFullYear();
+  const nowDayStr=`${nowYear}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+  const mnNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  function buildYearDays(y){
+    const isLeap=(y%4===0&&y%100!==0)||(y%400===0),n=isLeap?366:365,days=[],lbls=[];
+    for(let i=0;i<n;i++){
+      const dt=new Date(y,0,1+i);
+      const s=`${y}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      days.push(s);lbls.push(dt.getDate()===1?mnNames[dt.getMonth()]:'');
+    }
+    return{days,lbls};
+  }
+  const refY=mY.includes(nowYear)?nowYear:(mY[mY.length-1]||nowYear);
+  const{days:refDays,lbls:refLbls}=buildYearDays(refY);
+  const mDs=mY.map(y=>{
     const color=lc[years.indexOf(y)%lc.length];
+    const{days}=buildYearDays(y);
+    const pm={};
+    state.logs.forEach(l=>{if(l.date&&l.date.startsWith(String(y)))pm[l.date]=(pm[l.date]||0)+l.pages;});
     let cum=0;
-    const data=months.map((_,m)=>{
-      if(y===nowYear&&m>nowMonth)return null; // future months → gap
-      const p=`${y}-${String(m+1).padStart(2,'0')}`;
-      cum+=state.logs.filter(l=>l.date.startsWith(p)).reduce((s,l)=>s+l.pages,0);
+    const data=days.map(d=>{
+      if(y===nowYear&&d>nowDayStr)return null;
+      cum+=(pm[d]||0);
       return cum;
     });
-    return{label:String(y),data,borderColor:color,backgroundColor:'transparent',
-      fill:false,tension:0.3,pointBackgroundColor:color,pointRadius:3,
+    while(data.length<refDays.length)data.push(null);
+    return{label:String(y),data:data.slice(0,refDays.length),borderColor:color,backgroundColor:'transparent',
+      fill:false,tension:0.3,pointBackgroundColor:color,pointRadius:0,
       borderWidth:y===CURRENT_YEAR?2.5:1.5,spanGaps:false};
   });
   destroyChart('monthly');
   charts['monthly']=new Chart(document.getElementById('chart-monthly').getContext('2d'),{type:'line',
-    data:{labels:months,datasets:mDs},
+    data:{labels:refLbls,datasets:mDs},
     options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
       scales:{...CD.scales,
-        x:{...CD.scales.x,title:{display:true,text:'Monat',font:{family:'DM Mono',size:9},color:'#7a7060'}},
+        x:{...CD.scales.x,title:{display:true,text:'Monat',font:{family:'DM Mono',size:9},color:'#7a7060'},
+           ticks:{...CD.scales.x.ticks,maxRotation:0,autoSkip:false}},
         y:{...CD.scales.y,beginAtZero:true,title:{display:true,text:'Seiten (kumulativ)',font:{family:'DM Mono',size:9},color:'#7a7060'}}}}});
 }
 
@@ -2347,6 +2378,8 @@ let _kindleParsed = [];
 
 function openFeedback(){
   document.getElementById('feedback-text').value='';
+  document.getElementById('feedback-subject').value='';
+  document.getElementById('feedback-category').value='Verbesserungsvorschlag';
   document.getElementById('feedback-modal').style.display='flex';
 }
 function closeFeedback(e){
@@ -2769,7 +2802,14 @@ function deleteConcept(id){
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();checkYesterdayBanner();renderFriendActivityToday();};
 
 window.initApp=function(){
-  document.getElementById('loading-screen').style.display='none';
+  const _logo=document.querySelector('#loading-screen img');
+  _logo.classList.remove('logo-pulse');
+  _logo.classList.add('logo-zoom-in');
+  setTimeout(()=>{
+    document.getElementById('loading-screen').style.display='none';
+    _logo.classList.remove('logo-zoom-in');
+    _logo.classList.add('logo-pulse');
+  },420);
   document.getElementById('app').style.display='block';
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});

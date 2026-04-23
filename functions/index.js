@@ -15,23 +15,28 @@ exports.sendFeedback = onCall(
   { secrets: [GMAIL_USER, GMAIL_PASS], region: "europe-west1" },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Login required");
-    const { text } = request.data;
+    const { text, subject, category } = request.data;
     if (!text?.trim()) throw new HttpsError("invalid-argument", "Empty feedback");
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user: GMAIL_USER.value(), pass: GMAIL_PASS.value() },
     });
+    const emailSubject = subject
+      ? `Crescendo Feedback [${category || "Sonstiges"}]: ${subject}`
+      : `Crescendo Feedback [${category || "Sonstiges"}]`;
     await transporter.sendMail({
       from: GMAIL_USER.value(),
       to: "stefan.a.hartmann@gmail.com",
-      subject: "Crescendo Feedback",
-      text: `Von: ${request.auth.token.email}\n\n${text}`,
+      subject: emailSubject,
+      text: `Von: ${request.auth.token.email}\nKategorie: ${category || "Sonstiges"}\n\n${text}`,
     });
 
     const db = getDatabase();
     await db.ref(`feedback/${Date.now()}`).set({
       text,
+      subject: subject || "",
+      category: category || "Sonstiges",
       user: request.auth.token.email,
       ts: new Date().toISOString(),
     });
