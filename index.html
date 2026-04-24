@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -429,6 +429,9 @@
   .book-status-badge{font-family:'DM Mono',monospace;font-size:0.52rem;padding:0.1rem 0.38rem;border-radius:6px;flex-shrink:0;}
   .book-status-badge.want{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
   .book-status-badge.reading{background:var(--sky-light);color:var(--sky-dark);border:1px solid var(--sky-dark);}
+  .book-status-badge.abandoned{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;}
+  .book-item.abandoned{background:var(--card);border-color:rgba(251,191,36,0.25);}
+  .book-item.abandoned .book-title{color:var(--muted);}
   .adv-filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;}
   @media(min-width:480px){.adv-filter-grid{grid-template-columns:1fr 1fr 1fr;}}
   .adv-filter-label{font-family:'DM Mono',monospace;font-size:0.57rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.2rem;}
@@ -1278,6 +1281,15 @@
           </select>
         </div>
       </div>
+      <div class="bm-field">
+        <label class="bm-label">Status</label>
+        <select id="bm-edit-status" class="bm-input">
+          <option value="want_to_read">Merkliste</option>
+          <option value="reading">Am Lesen</option>
+          <option value="done">Gelesen</option>
+          <option value="abandoned">Abgebrochen</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
         <div class="bm-field">
           <label class="bm-label">Seitenanzahl</label>
@@ -1555,7 +1567,7 @@ function updateLastPosHint(){
 }
 
 function populateBookSelect(){
-  const books=state.books.filter(b=>b.status!=='done').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
+  const books=state.books.filter(b=>b.status!=='done'&&b.status!=='abandoned').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
   const opts=books.length?books.map(b=>`<option value="${b.id}">${cap(b.title)}${b.status==='want_to_read'?' ★':''}</option>`).join(''):'<option value="">– Kein aktives Buch –</option>';
   const lastLog=state.logs.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id)[0];
   const setSelect=id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML=opts;if(lastLog){const o=s.querySelector(`option[value="${lastLog.bookId}"]`);if(o)o.selected=true;}};
@@ -1813,7 +1825,16 @@ function renderTodayStats(){
   const streak=calcStreak();
   const streakEl=document.getElementById('streak-display');
   if(streakEl){
-    if(streak>=1){streakEl.textContent=`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`;streakEl.classList.add('active');}
+    if(streak>=1){
+      let label;
+      if(streak===1)label='Tag 1. Der erste Schritt zählt.';
+      else if(streak===7)label='7 Tage am Stück 🔥 Eine Woche voller Bücher!';
+      else if(streak===14)label='14 Tage. Du machst das wirklich.';
+      else if(streak===30)label='30 Tage 🔥 Ein Monat am Stück. Legendär.';
+      else if(streak===100)label='100 Tage 🔥 Unaufhaltsam.';
+      else{const t=[`${streak} Tage am Stück. Unaufhaltsam.`,`Dein Streak: ${streak} Tage 🔥 Halt ihn am Laufen!`,`${streak} Tage stark. Mach's ${streak+1}.`];label=t[streak%t.length];}
+      streakEl.textContent=label;streakEl.classList.add('active');
+    }
     else{streakEl.textContent='';streakEl.classList.remove('active');}
   }
   // Mini pacing widget
@@ -1912,7 +1933,7 @@ function saveBookEdit(id){
 function exportToExcel(){
   if(typeof XLSX==='undefined'){toast('Export-Bibliothek lädt noch, bitte kurz warten…');return;}
   const wb=XLSX.utils.book_new();
-  const STATUS_DE={'want_to_read':'Möchte ich lesen','reading':'Am Lesen','done':'Gelesen'};
+  const STATUS_DE={'want_to_read':'Möchte ich lesen','reading':'Am Lesen','done':'Gelesen','abandoned':'Abgebrochen'};
 
   // ── Sheet 1: Bücher ─────────────────────────────────────
   const bookRows=state.books.map(b=>{
@@ -2060,7 +2081,7 @@ function renderBooks(){
     fc.innerHTML=`<button class="year-tab ${all?'active':''}" onclick="toggleBooksYear('all')">Alle</button>`
       +years.map(y=>`<button class="year-tab ${booksYF.has(y)?'active':''}" onclick="toggleBooksYear(${y})">${y}</button>`).join('');}
   const sf=document.getElementById('books-status-filter');
-  if(sf){const statuses=[{v:'all',l:'Alle'},{v:'want_to_read',l:'Merkliste'},{v:'reading',l:'Lese ich'},{v:'done',l:'Gelesen'}];
+  if(sf){const statuses=[{v:'all',l:'Alle'},{v:'want_to_read',l:'Merkliste'},{v:'reading',l:'Lese ich'},{v:'done',l:'Gelesen'},{v:'abandoned',l:'Abgebrochen'}];
     sf.innerHTML=statuses.map(s=>`<button class="year-tab ${booksStatusF===s.v?'active':''}" onclick="toggleBooksStatus('${s.v}')">${s.l}</button>`).join('');}
   // Advanced filter panel rendering
   const advInner=document.getElementById('books-adv-inner');
@@ -2091,7 +2112,7 @@ function renderBooks(){
 
   // Status counts (unfiltered)
   const scEl=document.getElementById('books-status-counts');
-  if(scEl){const r=state.books.filter(b=>b.status==='reading').length,w=state.books.filter(b=>b.status==='want_to_read').length,d=state.books.filter(b=>b.status==='done').length;const parts=[];if(r)parts.push(r+' Lese ich');if(w)parts.push(w+' Merkliste');if(d)parts.push(d+' Gelesen');scEl.textContent=parts.join(' · ');}
+  if(scEl){const r=state.books.filter(b=>b.status==='reading').length,w=state.books.filter(b=>b.status==='want_to_read').length,d=state.books.filter(b=>b.status==='done').length,a=state.books.filter(b=>b.status==='abandoned').length;const parts=[];if(r)parts.push(r+' Lese ich');if(w)parts.push(w+' Merkliste');if(d)parts.push(d+' Gelesen');if(a)parts.push(a+' Abgebrochen');scEl.textContent=parts.join(' · ');}
 
   // Goal mini bar
   const goal=state.goals[CURRENT_YEAR];
@@ -2122,7 +2143,7 @@ function renderBooks(){
     if(searchQ&&!cap(b.title).toLowerCase().includes(searchQ)&&!(b.author||'').toLowerCase().includes(searchQ))return false;
     return true;
   });
-  const statusOrder={reading:0,want_to_read:1,done:2};
+  const statusOrder={reading:0,want_to_read:1,done:2,abandoned:3};
   books=[...books].sort((a,b)=>(statusOrder[a.status]??1)-(statusOrder[b.status]??1)||b.year-a.year||a.title.localeCompare(b.title));
   document.getElementById('books-count').textContent=books.length;
   document.getElementById('books-done').textContent=state.books.filter(b=>b.status==='done').length;
@@ -2160,8 +2181,8 @@ function renderBooks(){
   }
 
   list.className='book-list';
-  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
-  const STATUS_LABELS={reading:'Lese ich',want_to_read:'Merkliste',done:'Gelesen'};
+  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':s==='abandoned'?'<div class="book-status-badge abandoned">Abgebrochen</div>':'';
+  const STATUS_LABELS={reading:'Lese ich',want_to_read:'Merkliste',done:'Gelesen',abandoned:'Abgebrochen'};
   let lastStatusGroup='';
   list.innerHTML=books.map(b=>{
     const prog=getBookProgress(b);
@@ -2185,7 +2206,7 @@ function renderBooks(){
       lastStatusGroup=b.status;
     }
     const lastReadHint=b.status==='reading'&&fmtLast?`<div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--muted);padding:0 0.85rem 0.15rem">Zuletzt: ${fmtLast}</div>`:'';
-    return`${groupHeader}<div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':''}" data-id="${b.id}">
+    return`${groupHeader}<div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':b.status==='abandoned'?'abandoned':''}" data-id="${b.id}">
       <div class="book-item-row" onclick="openBookModal(${b.id})">
         <div class="book-list-cover" onclick="event.stopPropagation();toggleBookDone(${b.id})" title="Als gelesen markieren">
           ${b.cover_url
@@ -2578,6 +2599,7 @@ function openBookModal(id){
   document.getElementById('bm-verlag').value=b.verlag||'';
   document.getElementById('bm-source').value=b.source||'';
   document.getElementById('bm-language').value=b.language||'';
+  document.getElementById('bm-edit-status').value=b.status||'want_to_read';
   document.getElementById('bm-cover-url').value=b.cover_url||'';
   document.getElementById('bm-isbn').value=b.isbn||'';
   document.getElementById('bm-notes').value=b.notes||'';
@@ -2606,7 +2628,7 @@ function openBookModal(id){
   // Attach autosave listeners (idempotent via flag)
   if(!document.getElementById('bmt-stammdaten').dataset.autosave){
     document.getElementById('bmt-stammdaten').dataset.autosave='1';
-    ['bm-edit-title','bm-edit-author','bm-format','bm-edit-type','bm-edit-pages','bm-edit-year','bm-source','bm-cover-url','bm-isbn'].forEach(elId=>{
+    ['bm-edit-title','bm-edit-author','bm-format','bm-edit-type','bm-edit-status','bm-edit-pages','bm-edit-year','bm-source','bm-cover-url','bm-isbn'].forEach(elId=>{
       document.getElementById(elId)?.addEventListener('input',scheduleAutosave);
     });
     document.getElementById('bm-notes')?.addEventListener('input',scheduleAutosave);
@@ -2651,7 +2673,7 @@ async function saveBookDetails(){
       type:document.getElementById('bm-edit-type').value,
       pages:parseInt(document.getElementById('bm-edit-pages').value)||0,
       year:parseInt(document.getElementById('bm-edit-year').value)||CURRENT_YEAR,
-      status:'want_to_read',
+      status:document.getElementById('bm-edit-status').value||'want_to_read',
       createdAt:new Date().toISOString(),
       verlag:document.getElementById('bm-verlag').value.trim(),
       source:document.getElementById('bm-source').value.trim(),
@@ -2680,6 +2702,7 @@ async function saveBookDetails(){
     b.type=document.getElementById('bm-edit-type').value;
     b.pages=parseInt(document.getElementById('bm-edit-pages').value)||b.pages;
     b.year=parseInt(document.getElementById('bm-edit-year').value)||b.year;
+    b.status=document.getElementById('bm-edit-status').value||b.status;
     b.verlag=document.getElementById('bm-verlag').value.trim();
     b.source=document.getElementById('bm-source').value.trim();
     b.language=document.getElementById('bm-language').value.trim();
@@ -3388,7 +3411,7 @@ function toggleGridView(){
 let _mlMode='page';
 function openMiniLog(){
   const sel=document.getElementById('ml-book');
-  const books=state.books.filter(b=>b.status!=='done').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
+  const books=state.books.filter(b=>b.status!=='done'&&b.status!=='abandoned').sort((a,b)=>b.year-a.year||a.title.localeCompare(b.title));
   if(!books.length){toast('Kein aktives Buch vorhanden','info');return;}
   sel.innerHTML=books.map(b=>`<option value="${b.id}">${cap(b.title)}</option>`).join('');
   // pre-select last logged book
@@ -4036,7 +4059,7 @@ function renderFriendLibrary(){
     let s='';for(let i=1;i<=5;i++){if(r>=i)s+=`<span class="bsd-star full">★</span>`;else if(r>=i-0.5)s+=`<span class="bsd-star half">★</span>`;else s+=`<span class="bsd-star" style="color:var(--border)">★</span>`;}
     return `<div class="book-stars-display">${s}</div>`;
   };
-  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':'';
+  const sBadge=(s)=>s==='want_to_read'?'<div class="book-status-badge want">Merkliste</div>':s==='reading'?'<div class="book-status-badge reading">Lese ich</div>':s==='abandoned'?'<div class="book-status-badge abandoned">Abgebrochen</div>':'';
 
   let lastGroup='';
   list.innerHTML=books.map(b=>{
