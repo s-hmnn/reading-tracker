@@ -891,6 +891,7 @@
     </div>
   </div>
   <div id="pacing-mini" style="display:none;font-family:'DM Mono',monospace;font-size:0.72rem;text-align:center;margin:0.5rem 0 0.25rem;padding:0.4rem 0.85rem;border-radius:8px;background:var(--card);border:1px solid var(--border)"></div>
+  <div id="streak-display"></div>
   <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
   <div class="card" style="padding-left:0;padding-right:0">
     <div class="log-table-wrap">
@@ -1359,8 +1360,21 @@
     </div>
     </div><!-- #bm-tab-scroll -->
     <div id="bm-modal-footer">
+      <button id="bm-delete-btn" class="btn btn-danger btn-sm" style="display:none;margin-right:auto" onclick="deleteBookFromModal()">Löschen</button>
       <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
       <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE BOOK CONFIRMATION MODAL -->
+<div id="delete-book-modal" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:300;align-items:center;justify-content:center;animation:bmFade 0.18s ease">
+  <div onclick="event.stopPropagation()" style="background:var(--card);border-radius:16px;width:90%;max-width:360px;padding:1.4rem 1.4rem 1.2rem;box-shadow:0 8px 40px rgba(0,0,0,0.18)">
+    <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:600;margin-bottom:0.55rem">Buch löschen?</div>
+    <div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:1.2rem">Bist du sicher, dass du dieses Buch löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.</div>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end">
+      <button class="btn btn-outline btn-sm" onclick="cancelDeleteFromModal()">Abbrechen</button>
+      <button class="btn btn-sm" style="background:var(--danger);color:#fff;border:none" onclick="confirmDeleteFromModal()">Löschen</button>
     </div>
   </div>
 </div>
@@ -1790,13 +1804,8 @@ function renderTodayStats(){
   document.getElementById('stat-avg').textContent=d>0?Math.round(t/d):0;
   // Streak
   const streak=calcStreak();
-  let streakEl=document.getElementById('streak-display');
-  if(!streakEl){
-    streakEl=document.createElement('div');streakEl.id='streak-display';
-    streakEl.style.cssText='font-family:"DM Mono",monospace;font-size:0.72rem;color:var(--muted);margin-top:0.4rem;text-align:center';
-    document.querySelector('.stats-grid')?.after(streakEl);
-  }
-  streakEl.textContent=streak>=1?`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`:'';
+  const streakEl=document.getElementById('streak-display');
+  if(streakEl)streakEl.textContent=streak>=1?`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`:'';
   // Mini pacing widget
   const pmini=document.getElementById('pacing-mini');
   if(pmini){
@@ -1893,6 +1902,23 @@ function saveBookEdit(id){
 function deleteBook(id,e){
   e.stopPropagation();if(!confirm('Buch löschen?'))return;
   state.books=state.books.filter(b=>b.id!==id);save();renderBooks();populateBookSelect();
+}
+function deleteBookFromModal(){
+  document.getElementById('delete-book-modal').style.display='flex';
+}
+function cancelDeleteFromModal(){
+  document.getElementById('delete-book-modal').style.display='none';
+}
+function confirmDeleteFromModal(){
+  document.getElementById('delete-book-modal').style.display='none';
+  const id=_bmBookId;
+  document.getElementById('book-modal').style.display='none';
+  document.body.style.overflow='';
+  if(id===null||id===undefined)return;
+  state.books=state.books.filter(b=>b.id!==id);
+  state.logs=state.logs.filter(l=>parseInt(l.bookId)!==id);
+  save();renderBooks();populateBookSelect();
+  toast('Buch gelöscht');
 }
 
 function getBookProgress(book){
@@ -2267,8 +2293,10 @@ function computeSpeedByType(){
     const book=state.books.find(b=>b.id===parseInt(l.bookId));
     if(!book||!book.type)return;
     if(!typeData[book.type])typeData[book.type]={totalPages:0,dates:new Set()};
-    typeData[book.type].totalPages+=(l.pages||0);
-    typeData[book.type].dates.add(l.date);
+    if((l.pages||0)>0){
+      typeData[book.type].totalPages+=l.pages;
+      typeData[book.type].dates.add(l.date);
+    }
   });
   return Object.entries(typeData)
     .map(([type,{totalPages,dates}])=>({type,totalPages,activeDays:dates.size,pagesPerDay:dates.size>0?totalPages/dates.size:0}))
@@ -2440,6 +2468,8 @@ function openBookModal(id){
     });
     document.getElementById('bm-notes')?.addEventListener('input',scheduleAutosave);
   }
+  const delBtn=document.getElementById('bm-delete-btn');
+  if(delBtn)delBtn.style.display=isNew?'none':'inline-flex';
   document.getElementById('book-modal').style.display='flex';
   document.body.style.overflow='hidden';
 }
