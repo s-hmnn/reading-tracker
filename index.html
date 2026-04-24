@@ -445,7 +445,7 @@
   .bsd-star.full{color:#F59E0B;}
   .bsd-star.half{color:#FCD34D;}
   /* Book Detail Modal */
-  #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
+  #book-modal{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(26,18,8,0.55);z-index:200;display:flex;align-items:flex-end;justify-content:center;animation:bmFade 0.18s ease;}
   @media(min-width:560px){#book-modal{align-items:center;}}
   #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;height:90vh;height:90dvh;overflow:hidden;display:flex;flex-direction:column;padding:1.3rem 1.3rem 0;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
   #bm-tab-scroll{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:0.5rem;}
@@ -756,7 +756,8 @@
   /* ── Card minimal ── */
   .card{border-radius:8px;}
   /* ── Streak ── */
-  #streak-display{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-muted);padding:0.5rem 0;border-top:1px solid var(--border);margin-top:0.5rem;}
+  #streak-display{font-family:'Lora',serif;font-size:1.05rem;font-weight:500;font-style:italic;color:var(--text-primary);text-align:center;padding:0.6rem 0.5rem;margin:0.5rem 0 0.2rem;background:var(--card);border-radius:10px;border:1px solid var(--border);display:none;}
+  #streak-display.active{display:block;}
 
 
   /* ── Book list cover thumbnails ── */
@@ -1809,7 +1810,10 @@ function renderTodayStats(){
   // Streak
   const streak=calcStreak();
   const streakEl=document.getElementById('streak-display');
-  if(streakEl)streakEl.textContent=streak>=1?`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`:'';
+  if(streakEl){
+    if(streak>=1){streakEl.textContent=`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`;streakEl.classList.add('active');}
+    else{streakEl.textContent='';streakEl.classList.remove('active');}
+  }
   // Mini pacing widget
   const pmini=document.getElementById('pacing-mini');
   if(pmini){
