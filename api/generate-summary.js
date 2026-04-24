@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { bookData } = req.body || {};
+  const { bookData, generateKeywords, existingSummary, existingKeywords } = req.body || {};
   if (!bookData) return res.status(400).json({ error: 'bookData required' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -36,6 +36,29 @@ module.exports = async function handler(req, res) {
   };
 
   try {
+    if (generateKeywords) {
+      const alreadyHave = (existingKeywords || []).join(', ') || '(keine)';
+      const summaryContext = existingSummary
+        ? `\nVorhandene KI-Analyse des Buches:\n${existingSummary}`
+        : '';
+      const notesContext = notes ? `\nNotizen: ${notes}` : '';
+      const quotesContext = quotesText ? `\nZitate:\n${quotesText}` : '';
+
+      const raw = await callAnthropic('claude-haiku-4-5-20251001', 300,
+        `Schlage 5–8 prägnante deutschsprachige Keywords für das Buch "${title}" von ${author || 'unbekannt'} vor.${summaryContext}${notesContext}${quotesContext}
+
+Bereits vorhandene Keywords (diese NICHT vorschlagen): ${alreadyHave}
+
+Keywords sollen kurze, präzise Begriffe sein: Themen, Epoche, Stil, Herkunft, Genre, Stimmung.
+Antworte NUR mit diesem JSON (kein Markdown): {"keywords":["Begriff1","Begriff2"]}`
+      );
+
+      const cleaned = extractJSON(raw);
+      const parsed = JSON.parse(cleaned);
+      const suggested = (parsed.keywords || []).filter(k => !(existingKeywords || []).includes(k));
+      return res.json({ suggestedKeywords: suggested });
+    }
+
     const raw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
       `Analysiere "${title}" von ${author || 'unbekannt'} nach Adlers Lese-Methode.
 

@@ -1329,6 +1329,8 @@
           <input type="text" id="bm-keyword-input" class="bm-input" placeholder="Keyword eingeben + Enter" autocomplete="off" oninput="onKeywordInput()" onkeydown="onKeywordKeydown(event)">
           <div id="bm-keyword-dd" style="display:none"></div>
         </div>
+        <button type="button" id="bm-kw-suggest-btn" class="btn btn-outline btn-sm" style="margin-top:0.45rem;font-size:0.72rem" onclick="suggestKeywordsWithAI()">🤖 Vorschläge</button>
+        <div id="bm-kw-suggestions" style="display:none;margin-top:0.5rem"></div>
       </div>
       <div class="bm-field" style="margin-top:0.8rem;border-top:1px solid var(--border);padding-top:0.8rem">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem">
@@ -2487,6 +2489,46 @@ function selectKeyword(k){
   renderKeywordTags();
 }
 
+async function suggestKeywordsWithAI(){
+  const b=state.books.find(b=>b.id===_bmBookId);
+  if(!b)return;
+  const btn=document.getElementById('bm-kw-suggest-btn');
+  const box=document.getElementById('bm-kw-suggestions');
+  const orig=btn.textContent;
+  btn.disabled=true;btn.textContent='🤖 Lädt…';
+  box.style.display='none';
+  try{
+    const r=await fetch('https://reading-tracker-puce.vercel.app/api/generate-summary',{
+      method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        generateKeywords:true,
+        bookData:{title:b.title,author:b.author||'',notes:b.notes||'',quotes:b.quotes||[]},
+        existingSummary:b.aiSummary||null,
+        existingKeywords:_bmKeywords
+      })
+    });
+    if(!r.ok){const err=await r.json();throw new Error(err.error||r.status);}
+    const{suggestedKeywords}=await r.json();
+    const newKws=(suggestedKeywords||[]).filter(k=>!_bmKeywords.includes(k));
+    if(!newKws.length){toast('Keine neuen Keywords gefunden');return;}
+    box.style.display='block';
+    box.innerHTML=`<div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:.1em">Vorschläge – klicken zum Hinzufügen</div>`
+      +newKws.map(k=>`<span class="keyword-tag" style="cursor:pointer;margin:0.1rem" onclick="selectKeyword(${JSON.stringify(k)});this.style.opacity='0.35';this.style.pointerEvents='none'">${k}</span>`).join('')
+      +`<div style="margin-top:0.5rem"><button class="btn btn-outline btn-sm" style="font-size:0.7rem" onclick="addAllSuggestedKeywords(${JSON.stringify(newKws)})">Alle übernehmen</button></div>`;
+  }catch(e){
+    toast('Fehler: '+(e.message||'Unbekannter Fehler'));
+  }finally{
+    btn.disabled=false;btn.textContent=orig;
+  }
+}
+
+function addAllSuggestedKeywords(kws){
+  kws.forEach(k=>{if(!_bmKeywords.includes(k))_bmKeywords.push(k);});
+  renderKeywordTags();
+  document.getElementById('bm-kw-suggestions').style.display='none';
+  toast(`${kws.length} Keywords übernommen ✓`,'success');
+}
+
 function openBookModal(id){
   const isNew=(id===null||id===undefined);
   _bmIsNew=isNew;_bmDirty=false;clearTimeout(_autosaveTimer);
@@ -2530,6 +2572,7 @@ function openBookModal(id){
   document.getElementById('bm-keyword-input').value='';
   document.getElementById('bm-keyword-dd').style.display='none';
   document.getElementById('bm-author-dd').style.display='none';
+  const kwSugBox=document.getElementById('bm-kw-suggestions');if(kwSugBox)kwSugBox.style.display='none';
   // Autosave indicator
   let si=document.getElementById('bm-autosave-indicator');
   if(!si){si=document.createElement('span');si.id='bm-autosave-indicator';si.style.cssText='font-family:"DM Mono",monospace;font-size:0.6rem;color:var(--success);margin-left:0.5rem;opacity:0;transition:opacity 0.4s;';document.getElementById('bm-title').after(si);}
