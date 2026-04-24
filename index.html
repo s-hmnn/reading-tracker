@@ -15,6 +15,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -448,7 +449,7 @@
   @media(min-width:560px){#book-modal{align-items:center;}}
   #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;height:90vh;height:90dvh;overflow:hidden;display:flex;flex-direction:column;padding:1.3rem 1.3rem 0;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
   #bm-tab-scroll{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:0.5rem;}
-  #bm-modal-footer{display:flex;gap:0.5rem;justify-content:flex-end;padding:0.6rem 0 max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border);flex-shrink:0;}
+  #bm-modal-footer{display:flex;gap:0.5rem;justify-content:space-between;align-items:center;padding:0.6rem 0 max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border);flex-shrink:0;}
   @media(min-width:560px){#book-modal-panel{border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.16);}}
   @-webkit-keyframes bmFade{from{opacity:0;}to{opacity:1;}}
   @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
@@ -996,6 +997,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:0.7rem">
       <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"><span id="books-count">0</span> · <span id="books-done">0</span> ✓</div>
+      <button class="btn btn-outline btn-sm" onclick="exportToExcel()" title="Alle Daten als Excel exportieren" style="font-size:0.75rem">↓ Export</button>
       <button class="btn btn-primary btn-sm" onclick="openBookModal(null)">+ Buch hinzufügen</button>
     </div>
   </div>
@@ -1360,9 +1362,11 @@
     </div>
     </div><!-- #bm-tab-scroll -->
     <div id="bm-modal-footer">
-      <button id="bm-delete-btn" class="btn btn-danger btn-sm" style="display:none;margin-right:auto" onclick="deleteBookFromModal()">Löschen</button>
-      <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
-      <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+      <button id="bm-delete-btn" class="btn btn-danger btn-sm" style="display:none" onclick="deleteBookFromModal()">Löschen</button>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-outline btn-sm" onclick="closeBookModal()">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="saveBookDetails()">Speichern</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1899,6 +1903,78 @@ function saveBookEdit(id){
   if(t)b.title=t;
   save();toast('Gespeichert ✓');renderBooks();populateBookSelect();
 }
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){toast('Export-Bibliothek lädt noch, bitte kurz warten…');return;}
+  const wb=XLSX.utils.book_new();
+  const STATUS_DE={'want_to_read':'Möchte ich lesen','reading':'Am Lesen','done':'Gelesen'};
+
+  // ── Sheet 1: Bücher ─────────────────────────────────────
+  const bookRows=state.books.map(b=>{
+    const bookLogs=state.logs.filter(l=>parseInt(l.bookId)===b.id).sort((a,z)=>a.date.localeCompare(z.date));
+    const started=bookLogs.length?bookLogs[0].date:'';
+    const finished=b.status==='done'&&bookLogs.length?bookLogs[bookLogs.length-1].date:'';
+    const totalRead=bookLogs.reduce((s,l)=>s+(l.pages||0),0);
+    return{
+      'Titel':b.title||'',
+      'Autor/in':b.author||'',
+      'Typ':b.type||'',
+      'Format':b.format||'',
+      'Seiten gesamt':b.pages||'',
+      'Erscheinungsjahr':b.year||'',
+      'Status':STATUS_DE[b.status]||b.status||'',
+      'Bewertung':b.rating||'',
+      'Verlag':b.verlag||'',
+      'Quelle':b.source||'',
+      'Sprache':b.language||'',
+      'ISBN':b.isbn||'',
+      'Begonnen':started,
+      'Beendet':finished,
+      'Gelesene Seiten':totalRead||''
+    };
+  });
+  const ws1=XLSX.utils.json_to_sheet(bookRows.length?bookRows:[{'Titel':'(keine Bücher)'}]);
+  ws1['!cols']=[{wch:30},{wch:22},{wch:12},{wch:10},{wch:12},{wch:14},{wch:16},{wch:10},{wch:16},{wch:20},{wch:10},{wch:16},{wch:12},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Bücher');
+
+  // ── Sheet 2: Leseprotokoll ───────────────────────────────
+  const logRows=[...state.logs].sort((a,z)=>a.date.localeCompare(z.date)).map(l=>{
+    const b=state.books.find(b=>b.id===parseInt(l.bookId));
+    return{
+      'Datum':l.date,
+      'Buch':b?b.title:l.bookTitle||'',
+      'Autor/in':b?b.author||'':'',
+      'Typ':b?b.type||'':'',
+      'Δ Seiten':l.pages||0,
+      'Position':l.currentPosition!=null?l.currentPosition:'',
+      'Positionstyp':l.positionType==='percent'?'Prozent':'Seite'
+    };
+  });
+  const ws2=XLSX.utils.json_to_sheet(logRows.length?logRows:[{'Datum':'(keine Einträge)'}]);
+  ws2['!cols']=[{wch:12},{wch:30},{wch:22},{wch:12},{wch:10},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Leseprotokoll');
+
+  // ── Sheet 3: Notizen & Zitate ────────────────────────────
+  const noteRows=[];
+  state.books.forEach(b=>{
+    if(b.notes&&b.notes.trim()){
+      noteRows.push({'Buch':b.title||'','Autor/in':b.author||'','Typ':'Notiz','Nr.':'','Inhalt':b.notes.trim()});
+    }
+    (b.quotes||[]).forEach((q,i)=>{
+      const text=typeof q==='string'?q:(q.text||'');
+      if(text.trim()){
+        noteRows.push({'Buch':b.title||'','Autor/in':b.author||'','Typ':'Zitat','Nr.':i+1,'Inhalt':text.trim()});
+      }
+    });
+  });
+  const ws3=XLSX.utils.json_to_sheet(noteRows.length?noteRows:[{'Buch':'(keine Notizen oder Zitate)'}]);
+  ws3['!cols']=[{wch:30},{wch:22},{wch:8},{wch:6},{wch:80}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Notizen & Zitate');
+
+  const date=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,`crescendo-export-${date}.xlsx`);
+  toast('Export erfolgreich ✓','success');
+}
+
 function deleteBook(id,e){
   e.stopPropagation();if(!confirm('Buch löschen?'))return;
   state.books=state.books.filter(b=>b.id!==id);save();renderBooks();populateBookSelect();
