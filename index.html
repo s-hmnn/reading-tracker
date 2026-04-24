@@ -1069,8 +1069,10 @@ function allYears(){
   const min=ys.length?Math.min(...ys):CURRENT_YEAR;
   const y=[];for(let i=min;i<=CURRENT_YEAR;i++)y.push(i);return y;
 }
-function todayStr(){return new Date().toISOString().slice(0,10);}
-function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function localDateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function prevDayStr(dateStr){const[y,m,dd]=dateStr.split('-').map(Number);const d=new Date(y,m-1,dd);d.setDate(d.getDate()-1);return localDateStr(d);}
 function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/86400000);}
 function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
 function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
@@ -1384,7 +1386,7 @@ function renderTodayStats(){
     streakEl.style.cssText='font-family:"DM Mono",monospace;font-size:0.72rem;color:var(--muted);margin-top:0.4rem;text-align:center';
     document.querySelector('.stats-grid')?.after(streakEl);
   }
-  streakEl.textContent=streak>1?`🔥 ${streak} Tage in Folge`:'';
+  streakEl.textContent=streak>=1?`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`:'';
   // Mini pacing widget
   const pmini=document.getElementById('pacing-mini');
   if(pmini){
@@ -1828,20 +1830,16 @@ function renderStats(){
 
 // ── Speed by Type ────────────────────────────────────────
 function computeSpeedByType(){
-  const bookLogs={};
-  state.logs.forEach(l=>{if(!bookLogs[l.bookId])bookLogs[l.bookId]=[];bookLogs[l.bookId].push(l);});
-  const typeStats={};
-  Object.entries(bookLogs).forEach(([bookId,logs])=>{
-    const book=state.books.find(b=>b.id===parseInt(bookId));
+  const typeData={};
+  state.logs.forEach(l=>{
+    const book=state.books.find(b=>b.id===parseInt(l.bookId));
     if(!book||!book.type)return;
-    const activeDays=new Set(logs.map(l=>l.date)).size;
-    const totalPages=logs.reduce((s,l)=>s+(l.pages||0),0);
-    if(!typeStats[book.type])typeStats[book.type]={totalPages:0,totalActiveDays:0};
-    typeStats[book.type].totalPages+=totalPages;
-    typeStats[book.type].totalActiveDays+=activeDays;
+    if(!typeData[book.type])typeData[book.type]={totalPages:0,dates:new Set()};
+    typeData[book.type].totalPages+=(l.pages||0);
+    typeData[book.type].dates.add(l.date);
   });
-  return Object.entries(typeStats)
-    .map(([type,{totalPages,totalActiveDays}])=>({type,totalPages,activeDays:totalActiveDays,pagesPerDay:totalActiveDays>0?totalPages/totalActiveDays:0}))
+  return Object.entries(typeData)
+    .map(([type,{totalPages,dates}])=>({type,totalPages,activeDays:dates.size,pagesPerDay:dates.size>0?totalPages/dates.size:0}))
     .filter(r=>r.pagesPerDay>0)
     .sort((a,b)=>b.pagesPerDay-a.pagesPerDay);
 }
@@ -2716,8 +2714,7 @@ function calcStreak(){
   if(dates[0]!==today&&dates[0]!==yesterday)return 0;
   let streak=1,prev=dates[0];
   for(let i=1;i<dates.length;i++){
-    const d=new Date(prev);d.setDate(d.getDate()-1);
-    const expected=d.toISOString().slice(0,10);
+    const expected=prevDayStr(prev);
     if(dates[i]===expected){streak++;prev=dates[i];}
     else break;
   }
