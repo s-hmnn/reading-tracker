@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="dark">
+<html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Crescendo">
-<!-- manifest not needed in preview -->
+<link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>Crescendo</title>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script type="module">
@@ -230,8 +230,6 @@
     onAuthStateChanged(auth, async (user) => {
       if(user && ALLOWED_EMAILS.includes(user.email)){
         currentUser = user;
-        window._currentUserDisplayName = user.displayName ? user.displayName.split(' ')[0] : (user.email ? user.email.split('@')[0] : '');
-        window._currentUserName = window._currentUserDisplayName;
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('loading-screen').style.display = 'flex';
         await loadFromFirebase();
@@ -249,117 +247,47 @@
   });
 </script>
 <style>
-  
-  /* ── THEME TOKENS ─────────────────────────────────────── */
-  :root {
-    /* Dark (Night Library) — default */
-    --bg: #110f0d;
-    --surface: #1c1917;
-    --border: rgba(255,220,150,0.11);
-    --border-hover: rgba(56,189,248,0.35);
-    --sky-50: rgba(56,189,248,0.07);
-    --sky-100: rgba(56,189,248,0.13);
-    --sky-200: rgba(56,189,248,0.22);
-    --sky-400: #38bdf8;
-    --sky-500: #38bdf8;
-    --sky-600: #7dd3fc;
-    --sky-700: #bae6fd;
-    --text-primary: #e8dfd5;
-    --text-secondary: #b8afa6;
-    --text-muted: #9a8e82;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --slate-50: #161412;
-    --slate-100: #201e1b;
-    /* legacy aliases */
-    --ink: #e8dfd5;
-    --paper: #110f0d;
-    --cream: #201e1b;
-    --accent: #f87171;
-    --gold: #fbbf24;
-    --muted: #9a8e82;
-    --card: #1c1917;
-    --sky: rgba(56,189,248,0.15);
-    --sky-dark: #38bdf8;
-    --sky-light: rgba(56,189,248,0.07);
-    --border-color: rgba(255,220,150,0.11);
+  :root{
+    --bg:#F0F8FF;--surface:#FFFFFF;--border:#E2E8F0;--border-hover:#BAE6FD;
+    --sky-50:#F0F9FF;--sky-100:#E0F2FE;--sky-200:#BAE6FD;--sky-400:#38BDF8;--sky-500:#0EA5E9;--sky-600:#0284C7;--sky-700:#0369A1;
+    --text-primary:#0F172A;--text-secondary:#64748B;--text-muted:#94A3B8;
+    --success:#10B981;--warning:#F59E0B;--danger:#EF4444;
+    --slate-50:#F8FAFC;--slate-100:#F1F5F9;
+    /* legacy */
+    --ink:#0F172A;--paper:#F0F8FF;--cream:#F1F5F9;--accent:#EF4444;--gold:#F59E0B;--muted:#64748B;--card:#FFFFFF;--sky:#BAE6FD;--sky-dark:#0EA5E9;--sky-light:#F0F9FF;--border-color:#E2E8F0;
   }
-  [data-theme="light"] {
-    --bg: #f5f2ed;
-    --surface: #faf8f5;
-    --border: #dcd6cc;
-    --border-hover: #bae6fd;
-    --sky-50: #f0f9ff;
-    --sky-100: #e0f2fe;
-    --sky-200: #bae6fd;
-    --sky-400: #38bdf8;
-    --sky-500: #0ea5e9;
-    --sky-600: #0284c7;
-    --sky-700: #0369a1;
-    --text-primary: #1a1714;
-    --text-secondary: #5a5048;
-    --text-muted: #7a6e62;
-    --success: #16a34a;
-    --warning: #d97706;
-    --danger: #dc2626;
-    --slate-50: #f0ece5;
-    --slate-100: #e8e2d9;
-    --ink: #1a1714;
-    --paper: #f5f2ed;
-    --cream: #e8e2d9;
-    --accent: #dc2626;
-    --gold: #d97706;
-    --muted: #7a6e62;
-    --card: #faf8f5;
-    --sky: #bae6fd;
-    --sky-dark: #0ea5e9;
-    --sky-light: #f0f9ff;
-    --border-color: #dcd6cc;
-  }
-
-  
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5;transition:background 0.3s,color 0.3s;}
-
-  #loading-screen{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
-  #loading-screen h2{font-family:'Lora',serif;font-weight:600;font-size:22px;color:var(--text-primary);font-style:italic;}
+  body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5;}
+  #loading-screen{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--sky-50);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:999;}
+  #loading-screen h2{font-family:'Inter',sans-serif;font-weight:600;font-size:22px;color:var(--text-primary);}
   #loading-screen h2 span{color:var(--sky-500);}
   .spinner{width:36px;height:36px;border:3px solid var(--sky-200);border-top-color:var(--sky-500);border-radius:50%;animation:spin 0.8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #loading-screen p{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
   @keyframes logoPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
-  @keyframes logoZoomIn{0%{transform:scale(1);opacity:1;}65%{transform:scale(4);opacity:1;}100%{transform:scale(6);opacity:0;}}
-  @keyframes screenFadeOut{0%{opacity:1;}55%{opacity:1;}100%{opacity:0;}}
+  @keyframes logoZoomIn{from{transform:scale(1);opacity:1;}to{transform:scale(1.7);opacity:0;}}
   .logo-pulse{animation:logoPulse 1.6s ease-in-out infinite;}
-  .logo-zoom-in{animation:logoZoomIn 0.75s cubic-bezier(0.4,0,1,1) forwards;}
-  .screen-fade-out{animation:screenFadeOut 0.75s ease-in forwards;pointer-events:none;}
+  .logo-zoom-in{animation:logoZoomIn 0.4s ease-in forwards;}
   #offline-banner{display:none;background:#FEF3C7;border-bottom:1px solid #F59E0B;padding:8px 16px;text-align:center;font-size:12px;color:#92400E;letter-spacing:0.04em;}
   /* ── Top Navigation Bar ── */
-  
-  #topbar{position:sticky;top:0;z-index:100;height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
-  #topbar-logo{display:flex;align-items:center;white-space:nowrap;flex-shrink:0;gap:8px;}
-  #topbar-logo img{height:28px;width:28px;object-fit:contain;border-radius:6px;}
-  #topbar-logo-name{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text-primary);font-style:italic;letter-spacing:-0.01em;}
-  #topbar-nav{display:flex;align-items:center;flex:1;justify-content:center;overflow-x:auto;scrollbar-width:none;height:52px;}
+  #topbar{position:sticky;top:0;z-index:100;height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;}
+  #topbar-logo{display:flex;align-items:center;white-space:nowrap;flex-shrink:0;}
+  #topbar-logo img{height:36px;width:36px;object-fit:contain;}
+  #topbar-nav{display:flex;align-items:center;flex:1;justify-content:center;overflow-x:auto;scrollbar-width:none;height:56px;}
   #topbar-nav::-webkit-scrollbar{display:none;}
-  #topbar-nav button{font-family:'Inter',sans-serif;font-size:12.5px;font-weight:400;height:52px;padding:0 13px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color 150ms,border-color 200ms;flex-shrink:0;letter-spacing:0.01em;}
-  #topbar-nav button.active{color:var(--sky-500);border-bottom-color:var(--sky-500);}
+  #topbar-nav button{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;height:56px;padding:0 14px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color 150ms,border-color 200ms;flex-shrink:0;}
+  #topbar-nav button.active{color:var(--sky-700);border-bottom-color:var(--sky-500);}
   #topbar-nav button:hover:not(.active){color:var(--sky-400);}
-  #topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto;}
-  #sync-status{font-size:11px;color:var(--text-muted);letter-spacing:0.03em;font-family:'DM Mono',monospace;}
-  /* Theme toggle button */
-  #theme-toggle{background:none;border:1px solid var(--border);border-radius:6px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-muted);transition:border-color 150ms,background 150ms;flex-shrink:0;}
-  #theme-toggle:hover{border-color:var(--sky-400);background:var(--sky-50);}
-
+  #topbar-right{display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:auto;}
+  #sync-status{font-size:12px;color:var(--text-muted);letter-spacing:0.04em;}
   .hdr-year{display:none;} .hdr-date{display:none;} .hdr-right{display:none;}
   main{padding:32px 24px 80px;max-width:1280px;margin:0 auto;}
   .tab-content{display:none;} .tab-content.active{display:block;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;transition:border-color 150ms,box-shadow 150ms,background 0.3s;}
-  .card:hover{border-color:var(--border-hover);box-shadow:0 2px 16px rgba(0,0,0,0.15);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;transition:border-color 120ms,box-shadow 120ms;}
+  .card:hover{border-color:var(--border-hover);box-shadow:0 2px 12px rgba(14,165,233,0.06);}
   .card-sky{background:var(--sky-50);border:1px solid var(--sky-200);border-radius:12px;padding:20px 24px;}
   .card-title{font-family:'Inter',sans-serif;font-size:12px;font-weight:400;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;}
-  .big-number{font-family:'Lora',serif;font-size:28px;font-weight:600;line-height:1;color:var(--text-primary);}
+  .big-number{font-family:'Inter',sans-serif;font-size:28px;font-weight:600;line-height:1;color:var(--text-primary);}
   .big-number.accent{color:var(--danger);} .big-number.gold{color:var(--warning);} .big-number.sky{color:var(--sky-500);}
   .sub{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;}
   .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.7rem;margin-bottom:1.3rem;}
@@ -376,20 +304,18 @@
   .input-row input:focus,.input-row select:focus{outline:2px solid var(--sky-dark);outline-offset:-1px;}
   .btn{font-family:'Inter',sans-serif;font-size:13px;font-weight:400;padding:7px 14px;border:none;cursor:pointer;border-radius:8px;transition:all 120ms;white-space:nowrap;touch-action:manipulation;}
   .btn:active{transform:scale(0.97);}
-  .btn-primary{background:var(--sky-500);color:#0d0d0d;font-weight:500;}
-  [data-theme="light"] .btn-primary{color:#fff;}
-  .btn-primary:hover{background:var(--sky-400);}
+  .btn-primary{background:var(--sky-500);color:#fff;} .btn-primary:hover{background:var(--sky-700);}
   .btn-sky{background:var(--sky-50);color:var(--sky-700);border:1px solid var(--sky-200);} .btn-sky:hover{border-color:var(--sky-400);}
   .btn-outline{background:var(--surface);border:1px solid var(--border);color:#334155;} .btn-outline:hover{border-color:#7DD3FC;}
   .btn-danger{background:transparent;border:1px solid #FECACA;color:var(--danger);} .btn-danger:active{background:var(--danger);color:white;}
   .btn-ghost{background:none;border:none;color:var(--sky-600);cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;padding:6px 10px;border-radius:6px;} .btn-ghost:hover{background:var(--sky-50);}
   .btn-sm{padding:4px 10px;font-size:12px;}
-  .section-title{font-family:'Lora',serif;font-size:16px;font-weight:600;font-style:italic;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .section-title{font-family:'Inter',sans-serif;font-size:16px;font-weight:500;color:var(--text-primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
   .two-col{display:grid;grid-template-columns:1fr;gap:0.9rem;margin-bottom:1.3rem;}
   @media(min-width:560px){.two-col{grid-template-columns:1fr 1fr;}}
   .book-list{display:flex;flex-direction:column;gap:0.35rem;}
-  .book-item{border:none;border-radius:10px;background:var(--card);transition:all 0.15s;border:1px solid var(--border);}
-  .book-item.done{background:var(--card);border-color:rgba(74,222,128,0.2);}
+  .book-item{border:none;border-radius:10px;background:var(--card);transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04);}
+  .book-item.done{background:#f0f7f4;box-shadow:0 1px 3px rgba(0,0,0,0.05),0 0 0 1.5px #b0d4c0;}
   .book-item-row{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;user-select:none;}
   .book-item.done .book-title{color:var(--muted);}
   .book-check{width:17px;height:17px;border:1.5px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:transparent;transition:all 0.15s;}
@@ -415,8 +341,8 @@
   .delete-btn{background:none;border:none;color:var(--border);cursor:pointer;font-size:1rem;padding:0 0.25rem;transition:color 0.15s;}
   .delete-btn:hover,.delete-btn:active{color:var(--accent);}
   .filter-row{display:flex;gap:0.35rem;flex-wrap:wrap;}
-  .year-tab{font-family:'Inter',sans-serif;font-size:12px;padding:4px 11px;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;border-radius:999px;transition:all 150ms;touch-action:manipulation;}
-  .year-tab.active{background:var(--sky-100);color:var(--sky-500);border-color:var(--sky-200);font-weight:500;}
+  .year-tab{font-family:'Inter',sans-serif;font-size:13px;padding:4px 12px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;border-radius:999px;transition:all 150ms;touch-action:manipulation;}
+  .year-tab.active{background:var(--sky-100);color:var(--sky-700);border-color:var(--sky-200);font-weight:500;}
   .year-tab:hover:not(.active){border-color:var(--sky-200);}
   .chart-wrap{position:relative;height:200px;margin:0.7rem 0;}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);color:var(--text-primary);border:1px solid var(--border);padding:10px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-size:13px;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
@@ -424,7 +350,7 @@
   .empty{text-align:center;padding:32px;color:var(--text-muted);font-size:13px;}
   .divider{height:1px;background:var(--border);margin:1.2rem 0;}
   .pacing-box{margin-top:0.7rem;padding:0.55rem 0.85rem;background:var(--sky-light);border:1px solid var(--sky-dark);border-radius:10px;font-size:0.8rem;line-height:1.5;}
-  .book-item.reading{background:var(--sky-light);border-color:var(--sky-200);}
+  .book-item.reading{background:var(--sky-light);box-shadow:0 1px 3px rgba(0,0,0,0.05),0 0 0 1.5px var(--sky-dark);}
   .book-status-badge{font-family:'DM Mono',monospace;font-size:0.52rem;padding:0.1rem 0.38rem;border-radius:6px;flex-shrink:0;}
   .book-status-badge.want{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
   .book-status-badge.reading{background:var(--sky-light);color:var(--sky-dark);border:1px solid var(--sky-dark);}
@@ -516,7 +442,7 @@
   #daily-quote-card .dq-nav{background:none;border:1px solid var(--sky-300);border-radius:6px;padding:4px 12px;font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--sky-700);cursor:pointer;transition:background 150ms;}
   #daily-quote-card .dq-nav:hover{background:var(--sky-100);}
   /* ── Login Screen ── */
-  #login-screen{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+  #login-screen{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--sky);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
   .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:320px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
   .login-logo{display:flex;justify-content:center;margin-bottom:12px;}
   .login-logo img{width:130px;height:130px;object-fit:contain;}
@@ -578,10 +504,10 @@
   #bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:110;background:var(--surface);border-top:1px solid var(--border);padding:4px 4px env(safe-area-inset-bottom);height:calc(56px + env(safe-area-inset-bottom));}
   #bottom-nav{-webkit-box-align:flex-start;align-items:flex-start;-webkit-justify-content:space-around;justify-content:space-around;}
   @media(max-width:639px){#bottom-nav{display:-webkit-flex;display:flex;}#topbar-nav{display:none;}main{padding-bottom:calc(80px + env(safe-area-inset-bottom));}}
-  .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;cursor:pointer;color:var(--text-muted);padding:4px 2px;border-radius:8px;min-height:44px;min-width:44px;touch-action:manipulation;transition:color 150ms;}
-  .bn-btn.active{color:var(--sky-500);}
-  .bn-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
-  .bn-btn span{font-family:'Inter',sans-serif;font-size:9px;font-weight:400;line-height:1;letter-spacing:0.03em;}
+  .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;color:var(--text-secondary);padding:4px 2px;border-radius:8px;min-height:44px;min-width:44px;touch-action:manipulation;transition:color 150ms;}
+  .bn-btn.active{color:var(--sky-700);}
+  .bn-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .bn-btn span{font-family:'Inter',sans-serif;font-size:9.5px;font-weight:400;line-height:1;}
   /* ── More sheet ── */
   #more-sheet{position:fixed;bottom:calc(56px + env(safe-area-inset-bottom));left:0;right:0;z-index:111;background:var(--surface);border-radius:16px 16px 0 0;border-top:1px solid var(--border);padding:0.8rem;display:none;box-shadow:0 -4px 20px rgba(0,0,0,0.1);}
   #more-sheet.open{display:block;}
@@ -681,109 +607,6 @@
   .friend-book-card.done{background:#f0f7f4;}
   .friend-book-card.reading{background:var(--sky-light);}
   .friend-book-cover img{width:32px;height:44px;border-radius:3px;object-fit:cover;}
-
-  /* ── Night Library extras ─────────────────────────────── */
-  #yesterday-banner{background:var(--surface);border:none;border-left:3px solid var(--sky-dark);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;box-shadow:none;}
-  .yb-title{font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--sky-500);}
-  #daily-quote-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:1rem;}
-  #daily-quote-card .dq-label{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--sky-500);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
-  #daily-quote-card blockquote{font-family:'Lora',serif;font-style:italic;font-size:0.92rem;line-height:1.7;color:var(--text-primary);margin:0 0 10px 0;border-left:2px solid var(--sky-200);padding-left:12px;}
-  #daily-quote-card .dq-source{font-family:'DM Mono',monospace;font-size:0.63rem;color:var(--text-muted);}
-  #daily-quote-card .dq-nav{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-family:'Inter',sans-serif;font-size:0.72rem;color:var(--text-secondary);cursor:pointer;transition:all 150ms;}
-  #daily-quote-card .dq-nav:hover{background:var(--sky-50);border-color:var(--sky-200);}
-  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:320px;width:100%;text-align:center;}
-  .login-logo img{width:90px;height:90px;object-fit:contain;}
-  .login-sub{font-family:'Lora',serif;font-size:13px;font-style:italic;color:var(--text-muted);margin-bottom:32px;}
-  .login-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 16px;background:var(--sky-500);color:#0d0d0d;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background 150ms;}
-  [data-theme="light"] .login-btn{color:#fff;}
-  .login-btn:hover{background:var(--sky-400);}
-  /* Topbar logo name */
-  #topbar-logo-name{font-family:'Lora',serif;font-size:16px;font-weight:600;color:var(--text-primary);font-style:italic;}
-  /* Quote items */
-  .quote-item{background:var(--slate-50);border:1px solid var(--border);}
-  .quote-item blockquote{font-family:'Lora',serif;}
-  /* Book modal */
-  #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;}
-  #bm-title{font-family:'Lora',serif;font-size:1.05rem;}
-  /* KB */
-  .kb-layout{border:1px solid var(--border);}
-  .kb-sidebar{background:var(--slate-50);}
-  .kb-detail-title{font-family:'Lora',serif;}
-  /* pacing box */
-  .pacing-box{background:var(--sky-light);border:1px solid var(--sky-200);}
-  /* Card sky */
-  .card-sky{background:var(--sky-50);border:1px solid var(--sky-200);}
-  /* book-grid-card */
-  .book-grid-card{border:1px solid var(--border);background:var(--card);}
-  .book-grid-card.done{border-color:rgba(74,222,128,0.2);}
-  .book-grid-card.reading{background:var(--sky-light);border-color:var(--sky-200);}
-  /* Charts: dark background */
-  canvas{border-radius:6px;}
-  /* Scrollbar */
-  ::-webkit-scrollbar{width:4px;height:4px;}
-  ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-  /* Smooth theme transition */
-  *{transition:background-color 0.25s,border-color 0.25s,color 0.2s;}
-  .btn,.book-item,.card,.book-grid-card,#topbar,#bottom-nav,#mini-log-sheet,#book-modal-panel{transition:background-color 0.25s,border-color 0.25s,color 0.2s,box-shadow 0.15s;}
-  /* progress bar */
-  .progress-track{background:var(--cream);}
-  .book-progress-bar{background:var(--cream);}
-
-
-  /* ── Refined Yesterday Banner ── */
-  #yesterday-banner{background:transparent;border:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0;padding:0.85rem 0;margin:0 0 1rem;box-shadow:none;}
-  /* ── Refined Daily Quote ── */
-  #daily-quote-card{background:transparent;border:none;border-left:2px solid var(--sky-200);border-radius:0;padding:0.6rem 0 0.6rem 1rem;margin-bottom:1.2rem;}
-  #daily-quote-card .dq-label{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
-  #daily-quote-card blockquote{font-family:'Lora',serif;font-style:italic;font-size:0.95rem;line-height:1.75;color:var(--text-primary);margin:0 0 8px;border:none;padding:0;}
-  #daily-quote-card .dq-source{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--text-muted);}
-  #daily-quote-card .dq-nav{background:none;border:none;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--sky-500);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
-  #daily-quote-card .dq-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
-  /* ── Refined pacing box ── */
-  #pacing-mini{font-family:'DM Mono',monospace;font-size:0.7rem;display:none;padding:0;background:none;border:none;color:var(--text-muted);}
-  /* ── Log area (Today) ── */
-  .two-col .card{border-radius:8px;}
-  /* ── Book list minimal ── */
-  .book-item{border-radius:0 !important;border-left:none;border-right:none;border-top:none;border-bottom:1px solid var(--border) !important;background:transparent !important;box-shadow:none !important;}
-  .book-item:first-child{border-top:1px solid var(--border) !important;}
-  .book-item.done{background:transparent !important;opacity:0.6;}
-  .book-item.reading{background:transparent !important;border-left:2px solid var(--sky-500) !important;}
-  .book-group-header{padding:1.2rem 0 0.25rem;font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);}
-  .book-progress-bar{height:2px;background:var(--border);border-radius:0;}
-  .book-progress-bar-fill{border-radius:0;}
-  /* ── Card minimal ── */
-  .card{border-radius:8px;}
-  /* ── Streak ── */
-  #streak-display{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-muted);padding:0.5rem 0;border-top:1px solid var(--border);margin-top:0.5rem;}
-
-
-  /* ── Book list cover thumbnails ── */
-  .book-list-cover{width:32px;height:46px;border-radius:3px;flex-shrink:0;position:relative;cursor:pointer;overflow:hidden;background:var(--slate-100);}
-  .book-list-cover img{width:100%;height:100%;object-fit:cover;display:block;}
-  .book-list-cover-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:0.75rem;font-weight:600;color:var(--text-muted);}
-  .book-list-cover-check{position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;border-radius:3px;}
-  .book-list-cover:hover .book-list-cover-check{opacity:1;}
-  .book-list-cover-check svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
-  .book-item.done .book-list-cover-check{opacity:1;background:rgba(74,222,128,0.35);}
-  .book-item.done .book-list-cover{opacity:0.55;}
-
-
-  /* ── Active Book Banner (Today) ── */
-  #active-book-banner{padding-bottom:1rem;border-bottom:1px solid var(--border);}
-  .abb-label{font-family:'DM Mono',monospace;font-size:0.57rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--sky-500);margin-bottom:0.6rem;}
-  .abb-row{display:flex;align-items:center;gap:0.85rem;}
-  .abb-cover{width:38px;height:54px;border-radius:3px;flex-shrink:0;background:var(--slate-100);overflow:hidden;}
-  .abb-cover img{width:100%;height:100%;object-fit:cover;}
-  .abb-cover-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:1rem;font-weight:600;color:var(--text-muted);}
-  .abb-info{flex:1;min-width:0;}
-  .abb-title{font-family:'Lora',serif;font-size:1rem;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
-  .abb-author{font-family:'Inter',sans-serif;font-size:0.75rem;color:var(--text-muted);font-style:italic;margin-bottom:0.5rem;}
-  .abb-progress-track{height:2px;background:var(--border);border-radius:1px;margin-bottom:0.2rem;}
-  .abb-progress-fill{height:100%;background:var(--sky-500);border-radius:1px;transition:width 0.4s;}
-  .abb-progress-labels{display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--text-muted);}
-  .abb-pct{font-family:'Lora',serif;font-size:1.4rem;font-weight:600;color:var(--sky-500);flex-shrink:0;line-height:1;}
-
 </style>
 </head>
 <body>
@@ -802,11 +625,6 @@
       Mit Google anmelden
     </button>
     <p id="login-error" class="login-error"></p>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button onclick="startDemo()" style="background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
-        Demo ansehen (ohne Login) →
-      </button>
-    </div>
   </div>
 </div>
 
@@ -830,7 +648,6 @@
     <button onclick="switchTab('friends',this)">Freunde</button>
   </nav>
   <div id="topbar-right">
-      <button id="theme-toggle" onclick="toggleTheme()" title="Light/Dark umschalten">🌙</button>
     <div id="sync-status"></div>
     <div id="header-date" style="display:none"></div>
     <div id="header-year" style="display:none"></div>
@@ -842,11 +659,6 @@
 <main>
 <!-- HEUTE -->
 <div id="tab-today" class="tab-content active">
-  <div id="greeting-header" style="padding:1.6rem 0 0.4rem">
-    <div id="greeting-text" style="font-family:'Lora',serif;font-size:1.55rem;font-weight:500;font-style:italic;color:var(--text-primary);line-height:1.2;letter-spacing:-0.01em">Guten Morgen.</div>
-    <div id="greeting-date" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--text-muted);margin-top:0.3rem;letter-spacing:0.05em"></div>
-  </div>
-  <div id="active-book-banner" style="display:none;margin:1rem 0 0.5rem"></div>
   <div id="yesterday-banner" style="display:none;margin-top:0.9rem">
     <div class="yb-header">
       <span class="yb-title">Gestern gelesen?</span>
@@ -872,23 +684,11 @@
       <button class="dq-nav" onclick="nextDailyQuote()">Nächstes →</button>
     </div>
   </div>
-  <div style="display:flex;gap:0;margin:0.6rem 0 1.4rem;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:1rem 0">
-    <div style="flex:1;text-align:center;border-right:1px solid var(--border)">
-      <div style="font-family:'Lora',serif;font-size:2rem;font-weight:600;line-height:1;color:var(--sky-500)" id="stat-today">0</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--text-muted);margin-top:0.3rem;letter-spacing:0.08em;text-transform:uppercase">Heute</div>
-    </div>
-    <div style="flex:1;text-align:center;border-right:1px solid var(--border)">
-      <div style="font-family:'Lora',serif;font-size:2rem;font-weight:600;line-height:1;color:var(--text-primary)" id="stat-week">0</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--text-muted);margin-top:0.3rem;letter-spacing:0.08em;text-transform:uppercase">Woche</div>
-    </div>
-    <div style="flex:1;text-align:center;border-right:1px solid var(--border)">
-      <div style="font-family:'Lora',serif;font-size:2rem;font-weight:600;line-height:1;color:var(--text-primary)" id="stat-month">0</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--text-muted);margin-top:0.3rem;letter-spacing:0.08em;text-transform:uppercase">Monat</div>
-    </div>
-    <div style="flex:1;text-align:center">
-      <div style="font-family:'Lora',serif;font-size:2rem;font-weight:600;line-height:1;color:var(--text-primary)" id="stat-avg">0</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--text-muted);margin-top:0.3rem;letter-spacing:0.08em;text-transform:uppercase">Ø / Tag</div>
-    </div>
+  <div class="stats-grid" style="margin-top:0.4rem">
+    <div class="card"><div class="card-title">Heute</div><div class="big-number accent" id="stat-today">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Woche</div><div class="big-number" id="stat-week">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Monat</div><div class="big-number gold" id="stat-month">0</div><div class="sub">Seiten</div></div>
+    <div class="card"><div class="card-title">Ø/Tag</div><div class="big-number sky" id="stat-avg">0</div><div class="sub">dieses Jahr</div></div>
   </div>
   <div id="pacing-mini" style="display:none;font-family:'DM Mono',monospace;font-size:0.72rem;text-align:center;margin:0.5rem 0 0.25rem;padding:0.4rem 0.85rem;border-radius:8px;background:var(--card);border:1px solid var(--border)"></div>
   <div class="section-title">Protokoll <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:400" id="log-year-label"></span></div>
@@ -912,7 +712,7 @@
   <div id="friend-activity-today" style="display:none">
     <div class="section-title" style="margin-top:1.3rem">
       <div class="friend-today-header">
-        <img id="friend-today-avatar" class="friend-today-avatar" alt="" style="display:none">
+        <img id="friend-today-avatar" class="friend-today-avatar" alt="" src="">
         <span id="friend-today-name">Freund</span> — letzte Einträge
       </div>
     </div>
@@ -1183,38 +983,20 @@
 <!-- MINI LOG SHEET -->
 <div id="mini-log-overlay" onclick="closeMiniLog()"></div>
 <div id="mini-log-sheet">
-  <!-- Drag handle -->
-  <div style="width:36px;height:3px;background:var(--border);border-radius:2px;margin:0 auto 1.2rem;"></div>
-
-  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.4rem">
-    <div style="font-family:'Lora',serif;font-size:1.1rem;font-weight:500;font-style:italic;color:var(--text-primary)">Eintrag erfassen</div>
-    <button onclick="closeMiniLog()" style="background:none;border:none;color:var(--text-muted);font-size:1rem;cursor:pointer;padding:0;line-height:1;opacity:0.6">✕</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem">
+    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--sky-dark)">Eintrag erfassen</div>
+    <button onclick="closeMiniLog()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:0 0.2rem">✕</button>
   </div>
-
-  <!-- Book selector -->
-  <div style="margin-bottom:1rem">
-    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem">Buch</div>
-    <select id="ml-book" onchange="onMlBookChange()" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);padding:0.4rem 0;font-family:'Lora',serif;font-size:0.95rem;color:var(--text-primary);cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;"></select>
+  <div class="input-row" style="flex-wrap:wrap">
+    <select id="ml-book" style="flex:2;min-width:140px" onchange="onMlBookChange()"></select>
+    <input type="date" id="ml-date" style="flex:1;min-width:120px;max-width:160px">
   </div>
-
-  <!-- Date -->
-  <div style="margin-bottom:1.2rem">
-    <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem">Datum</div>
-    <input type="date" id="ml-date" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);padding:0.4rem 0;font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--text-primary);outline:none;">
+  <div class="input-row" style="flex-wrap:wrap;margin-top:0.45rem">
+    <button id="ml-pos-toggle" class="btn btn-sky btn-sm" onclick="toggleMlMode()" style="flex-shrink:0;min-width:52px">Seite</button>
+    <input type="number" inputmode="numeric" id="ml-pages" min="0" max="9999" step="1" placeholder="Seite" style="max-width:100px">
+    <button class="btn btn-primary" onclick="addMiniLogEntry()">✓ Eintragen</button>
   </div>
-
-  <!-- Position -->
-  <div style="margin-bottom:0.5rem">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.4rem">
-      <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Position</div>
-      <button id="ml-pos-toggle" onclick="toggleMlMode()" style="background:none;border:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--sky-500);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px">Seite</button>
-    </div>
-    <input type="number" inputmode="numeric" id="ml-pages" min="0" max="9999" step="1" placeholder="—" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);padding:0.4rem 0;font-family:'Lora',serif;font-size:2rem;font-weight:600;color:var(--text-primary);outline:none;line-height:1;">
-  </div>
-  <div id="ml-last-pos" style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--text-muted);min-height:1.2em;margin-bottom:1.4rem"></div>
-
-  <button onclick="addMiniLogEntry()" style="width:100%;background:var(--sky-500);color:#0d0d0d;border:none;border-radius:8px;padding:13px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.01em;transition:background 150ms;">Eintragen</button>
-</div>
+  <div id="ml-last-pos" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.35rem;min-height:1em"></div>
 </div>
 
 <!-- BOOK DETAIL MODAL -->
@@ -1427,12 +1209,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-
-function coverColor(title){
-  const colors=['#1c2a3a','#2d1b08','#0a1f2d','#1a1f2d','#1f1a2d','#1a2d1e','#2d1a1a'];
-  let h=0;for(let i=0;i<(title||'').length;i++)h=(h<<5)-h+title.charCodeAt(i);
-  return colors[Math.abs(h)%colors.length];
-}
 const BOOK_TYPES=['Roman','Sachbuch','Biografie','Krimi','Fantasy','Lyrik','Sonstiges'];
 const CURRENT_YEAR=new Date().getFullYear();
 
@@ -1446,10 +1222,8 @@ function allYears(){
   const min=ys.length?Math.min(...ys):CURRENT_YEAR;
   const y=[];for(let i=min;i<=CURRENT_YEAR;i++)y.push(i);return y;
 }
-function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function localDateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function prevDayStr(dateStr){const[y,m,dd]=dateStr.split('-').map(Number);const d=new Date(y,m-1,dd);d.setDate(d.getDate()-1);return localDateStr(d);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function yesterdayStr(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
 function doy(ds){const d=new Date(ds),s=new Date(d.getFullYear(),0,0);return Math.floor((d-s)/86400000);}
 function daysInYear(y){return((y%4===0&&y%100!==0)||y%400===0)?366:365;}
 function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
@@ -1746,40 +1520,7 @@ window.prevDailyQuote=function(){
 };
 // ── End Daily Quote Review ───────────────────────────────────
 
-
-function renderActiveBookBanner(){
-  var banner = document.getElementById('active-book-banner');
-  if(!banner || !window._state) return;
-  var reading = state.books.filter(function(b){ return b.status === 'reading'; });
-  if(!reading.length){ banner.style.display='none'; return; }
-  var b = reading.reduce(function(best,book){
-    var lastLog=state.logs.filter(function(l){return l.bookId===book.id;}).map(function(l){return l.date;}).sort().pop()||'';
-    var bestLog=state.logs.filter(function(l){return l.bookId===best.id;}).map(function(l){return l.date;}).sort().pop()||'';
-    return lastLog>bestLog?book:best;
-  },reading[0]);
-  var prog = getBookProgress(b);
-  var pct = prog ? prog.pct : 0;
-  var label = prog ? prog.label : 'S. 0';
-  var initColor = typeof coverColor !== 'undefined' ? coverColor(b.title) : '#1c2a3a';
-  var coverHTML = b.cover_url
-    ? '<img src="' + b.cover_url + '" alt="" onerror="this.style.display=\'none\'">'
-    : '<div class="abb-cover-init" style="background:' + initColor + '">' + (b.title||'?')[0].toUpperCase() + '</div>';
-  banner.innerHTML =
-    '<div class="abb-label">Aktuelle Lektüre</div>' +
-    '<div class="abb-row" onclick="openBookModal(' + b.id + ')" style="cursor:pointer">' +
-      '<div class="abb-cover">' + coverHTML + '</div>' +
-      '<div class="abb-info">' +
-        '<div class="abb-title">' + cap(b.title) + '</div>' +
-        '<div class="abb-author">' + (b.author||'') + '</div>' +
-        '<div class="abb-progress-track"><div class="abb-progress-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="abb-progress-labels"><span>' + label + '</span><span>' + (b.pages ? b.pages + ' S.' : '') + '</span></div>' +
-      '</div>' +
-      '<div class="abb-pct">' + pct + '<span style="font-size:0.7rem;font-weight:400">%</span></div>' +
-    '</div>';
-  banner.style.display = 'block';
-}
 function renderTodayStats(){
-  renderActiveBookBanner();
   renderDailyQuotes();
   const today=todayStr(),wa=new Date();wa.setDate(wa.getDate()-7);
   const ws=wa.toISOString().slice(0,10),ms=today.slice(0,7);
@@ -1796,7 +1537,7 @@ function renderTodayStats(){
     streakEl.style.cssText='font-family:"DM Mono",monospace;font-size:0.72rem;color:var(--muted);margin-top:0.4rem;text-align:center';
     document.querySelector('.stats-grid')?.after(streakEl);
   }
-  streakEl.textContent=streak>=1?`🔥 ${streak} ${streak===1?'Tag':'Tage'} in Folge`:'';
+  streakEl.textContent=streak>1?`🔥 ${streak} Tage in Folge`:'';
   // Mini pacing widget
   const pmini=document.getElementById('pacing-mini');
   if(pmini){
@@ -2079,13 +1820,7 @@ function renderBooks(){
     const lastReadHint=b.status==='reading'&&fmtLast?`<div style="font-family:'DM Mono',monospace;font-size:0.57rem;color:var(--muted);padding:0 0.85rem 0.15rem">Zuletzt: ${fmtLast}</div>`:'';
     return`${groupHeader}<div class="book-item ${b.status==='done'?'done':b.status==='reading'?'reading':''}" data-id="${b.id}">
       <div class="book-item-row" onclick="openBookModal(${b.id})">
-        <div class="book-list-cover" onclick="event.stopPropagation();toggleBookDone(${b.id})" title="Als gelesen markieren">
-          ${b.cover_url
-            ?'<img src="'+b.cover_url+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-            :'<div class="book-list-cover-init" style="background:'+coverColor(b.title)+'">'+(b.title||'?')[0].toUpperCase()+'</div>'
-          }
-          <div class="book-list-cover-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-        </div>
+        <div class="book-check" onclick="event.stopPropagation();toggleBookDone(${b.id})">${b.status==='done'?'✓':''}</div>
         ${readToday?'<div class="book-today-dot" title="Heute gelesen"></div>':''}
         <div style="flex:1;min-width:0">
           <div class="book-title">${cap(b.title)}</div>
@@ -2119,10 +1854,9 @@ function renderBooks(){
 
 let charts={};
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function chartColors(){const dark=document.documentElement.getAttribute('data-theme')!=='light';return{grid:dark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.07)',tick:dark?'#9a8e82':'#7a7060'};}
 const CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-  scales:{x:{grid:{color:chartColors().grid},ticks:{font:{family:'DM Mono',size:9},color:chartColors().tick}},
-          y:{grid:{color:chartColors().grid},ticks:{font:{family:'DM Mono',size:9},color:chartColors().tick}}}};
+  scales:{x:{grid:{color:'#e8e3d4'},ticks:{font:{family:'DM Mono',size:9},color:'#7a7060'}},
+          y:{grid:{color:'#e8e3d4'},ticks:{font:{family:'DM Mono',size:9},color:'#7a7060'}}}};
 
 function renderYearCharts(){
   const years=allYears(),pal=['#a8c4d8','#b8860b','#c8402a','#5b7fa6','#9c6b8a','#4a7c59'];
@@ -2178,11 +1912,11 @@ function renderYearCharts(){
   destroyChart('monthly');
   charts['monthly']=new Chart(document.getElementById('chart-monthly').getContext('2d'),{type:'line',
     data:{labels:refLbls,datasets:mDs},
-    options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:chartColors().tick,boxWidth:12}}},
+    options:{...CD,plugins:{legend:{display:true,labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:12}}},
       scales:{...CD.scales,
-        x:{...CD.scales.x,title:{display:true,text:'Monat',font:{family:'DM Mono',size:9},color:chartColors().tick},
+        x:{...CD.scales.x,title:{display:true,text:'Monat',font:{family:'DM Mono',size:9},color:'#7a7060'},
            ticks:{...CD.scales.x.ticks,maxRotation:0,autoSkip:false}},
-        y:{...CD.scales.y,beginAtZero:true,title:{display:true,text:'Seiten (kumulativ)',font:{family:'DM Mono',size:9},color:chartColors().tick}}}}});
+        y:{...CD.scales.y,beginAtZero:true,title:{display:true,text:'Seiten (kumulativ)',font:{family:'DM Mono',size:9},color:'#7a7060'}}}}});
 }
 
 let selSY=new Set();
@@ -2227,9 +1961,9 @@ function renderStats(){
   const te=Object.entries(tc).sort((a,b)=>b[1]-a[1]),cols=['#a8c4d8','#b8860b','#c8402a','#4a7c59','#9c6b8a','#5b7fa6','#c8d8c0'];
   destroyChart('types');
   if(te.length){charts['types']=new Chart(document.getElementById('chart-types').getContext('2d'),{type:'doughnut',
-    data:{labels:te.map(e=>e[0]),datasets:[{data:te.map(e=>e[1]),backgroundColor:cols,borderWidth:2,borderColor:document.documentElement.getAttribute('data-theme')==='light'?'#faf8f3':'#1c1917'}]},
+    data:{labels:te.map(e=>e[0]),datasets:[{data:te.map(e=>e[1]),backgroundColor:cols,borderWidth:2,borderColor:'#faf8f3'}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',
-      labels:{font:{family:'DM Mono',size:9},color:chartColors().tick,boxWidth:10,padding:5}}}}});
+      labels:{font:{family:'DM Mono',size:9},color:'#1a1208',boxWidth:10,padding:5}}}}});
     document.getElementById('stat-types-list').innerHTML=te.map((e,i)=>`
       <div style="display:flex;justify-content:space-between;padding:0.22rem 0;font-size:0.75rem;border-bottom:1px solid var(--cream)">
         <span style="display:flex;align-items:center;gap:0.35rem"><span style="width:8px;height:8px;border-radius:50%;background:${cols[i%cols.length]};display:inline-block;flex-shrink:0"></span>${e[0]}</span>
@@ -2262,16 +1996,20 @@ function renderStats(){
 
 // ── Speed by Type ────────────────────────────────────────
 function computeSpeedByType(){
-  const typeData={};
-  state.logs.forEach(l=>{
-    const book=state.books.find(b=>b.id===parseInt(l.bookId));
+  const bookLogs={};
+  state.logs.forEach(l=>{if(!bookLogs[l.bookId])bookLogs[l.bookId]=[];bookLogs[l.bookId].push(l);});
+  const typeStats={};
+  Object.entries(bookLogs).forEach(([bookId,logs])=>{
+    const book=state.books.find(b=>b.id===parseInt(bookId));
     if(!book||!book.type)return;
-    if(!typeData[book.type])typeData[book.type]={totalPages:0,dates:new Set()};
-    typeData[book.type].totalPages+=(l.pages||0);
-    typeData[book.type].dates.add(l.date);
+    const activeDays=new Set(logs.map(l=>l.date)).size;
+    const totalPages=logs.reduce((s,l)=>s+(l.pages||0),0);
+    if(!typeStats[book.type])typeStats[book.type]={totalPages:0,totalActiveDays:0};
+    typeStats[book.type].totalPages+=totalPages;
+    typeStats[book.type].totalActiveDays+=activeDays;
   });
-  return Object.entries(typeData)
-    .map(([type,{totalPages,dates}])=>({type,totalPages,activeDays:dates.size,pagesPerDay:dates.size>0?totalPages/dates.size:0}))
+  return Object.entries(typeStats)
+    .map(([type,{totalPages,totalActiveDays}])=>({type,totalPages,activeDays:totalActiveDays,pagesPerDay:totalActiveDays>0?totalPages/totalActiveDays:0}))
     .filter(r=>r.pagesPerDay>0)
     .sort((a,b)=>b.pagesPerDay-a.pagesPerDay);
 }
@@ -3066,22 +2804,14 @@ function deleteConcept(id){
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();checkYesterdayBanner();renderFriendActivityToday();};
 
 window.initApp=function(){
-  // Set greeting name
-  if(window._setGreetingName){
-    const name = (window._currentUserDisplayName || '');
-    window._setGreetingName(name);
-  }
-  const _ls=document.getElementById('loading-screen');
-  const _logo=_ls.querySelector('img');
+  const _logo=document.querySelector('#loading-screen img');
   _logo.classList.remove('logo-pulse');
   _logo.classList.add('logo-zoom-in');
-  _ls.classList.add('screen-fade-out');
   setTimeout(()=>{
-    _ls.style.display='none';
-    _ls.classList.remove('screen-fade-out');
+    document.getElementById('loading-screen').style.display='none';
     _logo.classList.remove('logo-zoom-in');
     _logo.classList.add('logo-pulse');
-  },780);
+  },420);
   document.getElementById('app').style.display='block';
   const now=new Date();
   document.getElementById('header-date').textContent=now.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
@@ -3127,7 +2857,8 @@ function calcStreak(){
   if(dates[0]!==today&&dates[0]!==yesterday)return 0;
   let streak=1,prev=dates[0];
   for(let i=1;i<dates.length;i++){
-    const expected=prevDayStr(prev);
+    const d=new Date(prev);d.setDate(d.getDate()-1);
+    const expected=d.toISOString().slice(0,10);
     if(dates[i]===expected){streak++;prev=dates[i];}
     else break;
   }
@@ -3892,132 +3623,6 @@ function renderFriendLibrary(){
 }
 // ── End Friends ───────────────────────────────────────────────────────────
 
-</script>
-
-<script>
-(function(){
-  const saved = localStorage.getItem('crescendo-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
-  document.documentElement.setAttribute('data-theme', theme);
-  const btn = document.getElementById('theme-toggle');
-  if(btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-})();
-
-window.toggleTheme = function(){
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('crescendo-theme', next);
-  const btn = document.getElementById('theme-toggle');
-  if(btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
-  // Update Chart.js colors
-  const gridColor = next === 'dark' ? 'rgba(255,255,255,0.06)' : '#e8e3d4';
-  const tickColor = next === 'dark' ? '#9a8e82' : '#7a7060';
-  Object.values(window.charts || {}).forEach(chart => {
-    if(!chart || !chart.options) return;
-    ['x','y'].forEach(axis => {
-      if(chart.options.scales?.[axis]) {
-        if(chart.options.scales[axis].grid) chart.options.scales[axis].grid.color = gridColor;
-        if(chart.options.scales[axis].ticks) chart.options.scales[axis].ticks.color = tickColor;
-      }
-    });
-    chart.update('none');
-  });
-};
-</script>
-
-<script>
-window.startDemo = function() {
-  // Mock user
-  window._firebaseReady = true;
-  window._currentUserDisplayName = 'Matilde';
-  window._currentUserName = 'Matilde';
-  window.saveToFirebase = async function() {};
-
-  // Rich mock state
-  window._state = {
-    nextId: 50,
-    goals: { 2026: 15000 },
-    concepts: [],
-    books: [
-      { id:1, title:'Die Brüder Karamasow', author:'Fjodor Dostojewski', pages:987, year:2026, status:'reading', type:'Roman', format:'Buch', language:'Deutsch', rating:null, keywords:['Philosophie','Glaube'], quotes:[{text:'Die Schönheit wird die Welt retten.',page:498}], notes:'Tiefgreifend, langsam aber fesselnd.', cover_url:'', createdAt:'2026-01-15T00:00:00Z' },
-      { id:2, title:'Thinking, Fast and Slow', author:'Daniel Kahneman', pages:512, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Englisch', rating:4.5, keywords:['Psychologie','Entscheidung'], quotes:[{text:'Nothing in life is as important as you think it is while you are thinking about it.',page:95}], notes:'Pflichtlektüre.', cover_url:'', createdAt:'2025-03-10T00:00:00Z' },
-      { id:3, title:'Der Zauberberg', author:'Thomas Mann', pages:1008, year:2026, status:'want_to_read', type:'Roman', format:'Buch', language:'Deutsch', rating:null, keywords:[], quotes:[], notes:'', cover_url:'', createdAt:'2026-02-01T00:00:00Z' },
-      { id:4, title:'Sapiens', author:'Yuval Noah Harari', pages:443, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Englisch', rating:4, keywords:['Geschichte','Evolution'], quotes:[], notes:'Inspirierend.', cover_url:'', createdAt:'2025-01-05T00:00:00Z' },
-      { id:5, title:'Middlemarch', author:'George Eliot', pages:904, year:2025, status:'done', type:'Roman', format:'Buch', language:'Englisch', rating:5, keywords:['Klassiker'], quotes:[], notes:'', cover_url:'', createdAt:'2025-06-01T00:00:00Z' },
-      { id:6, title:'Resonanz', author:'Hartmut Rosa', pages:816, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Deutsch', rating:4.5, keywords:['Soziologie','Moderne'], quotes:[{text:'Resonanz ist das Gegenteil von Entfremdung.',page:55}], notes:'', cover_url:'', createdAt:'2025-09-01T00:00:00Z' },
-      { id:7, title:'Factfulness', author:'Hans Rosling', pages:341, year:2026, status:'want_to_read', type:'Sachbuch', format:'Buch', language:'Englisch', rating:null, keywords:[], quotes:[], notes:'', cover_url:'', createdAt:'2026-03-01T00:00:00Z' },
-    ],
-    logs: (function(){
-      const logs = [];
-      let id = 10;
-      const today = new Date();
-      // Generate 90 days of logs for Karamasow (bookId 1)
-      for(let i = 0; i < 90; i++) {
-        const d = new Date(today); d.setDate(d.getDate() - i);
-        if(Math.random() > 0.25) {
-          const ds = d.toISOString().slice(0,10);
-          const pages = Math.floor(Math.random()*35)+8;
-          const pos = Math.min(987, 200 + (90-i)*4 + Math.floor(Math.random()*10));
-          logs.push({id:id++, date:ds, bookId:1, bookTitle:'Die Brüder Karamasow', pages, currentPosition:pos, positionType:'page'});
-        }
-      }
-      // Some older logs for book 2
-      for(let i = 90; i < 150; i++) {
-        const d = new Date(today); d.setDate(d.getDate() - i);
-        if(Math.random() > 0.3) {
-          const ds = d.toISOString().slice(0,10);
-          logs.push({id:id++, date:ds, bookId:2, bookTitle:'Thinking, Fast and Slow', pages:Math.floor(Math.random()*40)+10, currentPosition:Math.min(512,i*3), positionType:'page'});
-        }
-      }
-      return logs;
-    })()
-  };
-
-  // Mock friends (empty for demo)
-  window._friends = [];
-  window._friendState = null;
-
-  // Show app
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('loading-screen').style.display = 'flex';
-  setTimeout(() => {
-    window.initApp();
-  }, 600);
-};
-</script>
-
-<script>
-(function initGreeting(){
-  const hour = new Date().getHours();
-  let salut = hour < 12 ? 'Guten Morgen' : hour < 17 ? 'Guten Tag' : hour < 21 ? 'Guten Abend' : 'Gute Nacht';
-  
-  function setGreeting(name){
-    const el = document.getElementById('greeting-text');
-    const de = document.getElementById('greeting-date');
-    if(el) el.textContent = name ? salut + ', ' + name + '.' : salut + '.';
-    if(de){
-      const now = new Date();
-      de.textContent = now.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
-    }
-  }
-
-  // Try to get name from Firebase auth when ready
-  window._setGreetingName = setGreeting;
-  
-  // Initial render without name
-  setGreeting('');
-
-  // Poll for currentUser (set by Firebase onAuthStateChanged)
-  const poll = setInterval(()=>{
-    if(window._currentUserName){
-      setGreeting(window._currentUserName);
-      clearInterval(poll);
-    }
-  }, 500);
-  setTimeout(()=>clearInterval(poll), 10000);
-})();
 </script>
 </body>
 </html>

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(firebase functions:secrets:get GMAIL_USER)",
+      "Bash(firebase functions:secrets:get GMAIL_APP_PASSWORD)"
     ]
   }
 }
