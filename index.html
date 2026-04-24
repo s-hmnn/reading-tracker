@@ -448,7 +448,7 @@
   @media(min-width:560px){#book-modal{align-items:center;}}
   #book-modal-panel{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:640px;height:90vh;height:90dvh;overflow:hidden;display:flex;flex-direction:column;padding:1.3rem 1.3rem 0;box-shadow:0 -4px 32px rgba(0,0,0,0.12);-webkit-animation:bmSlide 0.22s ease;animation:bmSlide 0.22s ease;}
   #bm-tab-scroll{flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:0.5rem;}
-  #bm-modal-footer{display:flex;gap:0.5rem;justify-content:flex-end;padding:0.6rem 0 1rem;border-top:1px solid var(--border);flex-shrink:0;}
+  #bm-modal-footer{display:flex;gap:0.5rem;justify-content:flex-end;padding:0.6rem 0 max(1rem,env(safe-area-inset-bottom));border-top:1px solid var(--border);flex-shrink:0;}
   @media(min-width:560px){#book-modal-panel{border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.16);}}
   @-webkit-keyframes bmFade{from{opacity:0;}to{opacity:1;}}
   @keyframes bmFade{from{opacity:0;}to{opacity:1;}}
@@ -1286,6 +1286,10 @@
         </div>
       </div>
       <div class="bm-field">
+        <label class="bm-label">Bewertung</label>
+        <div id="bm-stars" class="star-widget"></div>
+      </div>
+      <div class="bm-field">
         <label class="bm-label">Sprache</label>
         <input type="text" id="bm-language" class="bm-input" list="bm-language-list" placeholder="z.B. Deutsch">
         <datalist id="bm-language-list">
@@ -1308,10 +1312,6 @@
           <input type="url" id="bm-cover-url" class="bm-input" placeholder="https://…" oninput="previewCover()" style="flex:1">
           <button type="button" class="btn btn-outline btn-sm" onclick="refreshCoverInModal()" title="Cover automatisch suchen">🔍</button>
         </div>
-      </div>
-      <div class="bm-field">
-        <label class="bm-label">Bewertung</label>
-        <div id="bm-stars" class="star-widget"></div>
       </div>
     </div>
     <div id="bmt-inhalt" class="bm-tab">
