@@ -1,4 +1,9 @@
 {
   "buildCommand": null,
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "functions": {
+    "api/generate-summary.js": {
+      "maxDuration": 30
+    }
+  }
 }
