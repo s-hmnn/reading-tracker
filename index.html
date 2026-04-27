@@ -824,11 +824,6 @@
       Mit Google anmelden
     </button>
     <p id="login-error" class="login-error"></p>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button onclick="startDemo()" style="background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">
-        Demo ansehen (ohne Login) →
-      </button>
-    </div>
   </div>
 </div>
 
@@ -4335,68 +4330,6 @@ window.toggleTheme = function(){
     });
     chart.update('none');
   });
-};
-</script>
-
-<!-- ═══ SECTION: JavaScript – Demo-Daten ═══ -->
-<script>
-window.startDemo = function() {
-  // Mock user
-  window._firebaseReady = true;
-  window._currentUserDisplayName = 'Matilde';
-  window._currentUserName = 'Matilde';
-  window.saveToFirebase = async function() {};
-
-  // Rich mock state
-  window._state = {
-    nextId: 50,
-    goals: { 2026: 15000 },
-    concepts: [],
-    books: [
-      { id:1, title:'Die Brüder Karamasow', author:'Fjodor Dostojewski', pages:987, year:2026, status:'reading', type:'Roman', format:'Buch', language:'Deutsch', rating:null, keywords:['Philosophie','Glaube'], quotes:[{text:'Die Schönheit wird die Welt retten.',page:498}], notes:'Tiefgreifend, langsam aber fesselnd.', cover_url:'', createdAt:'2026-01-15T00:00:00Z' },
-      { id:2, title:'Thinking, Fast and Slow', author:'Daniel Kahneman', pages:512, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Englisch', rating:4.5, keywords:['Psychologie','Entscheidung'], quotes:[{text:'Nothing in life is as important as you think it is while you are thinking about it.',page:95}], notes:'Pflichtlektüre.', cover_url:'', createdAt:'2025-03-10T00:00:00Z' },
-      { id:3, title:'Der Zauberberg', author:'Thomas Mann', pages:1008, year:2026, status:'want_to_read', type:'Roman', format:'Buch', language:'Deutsch', rating:null, keywords:[], quotes:[], notes:'', cover_url:'', createdAt:'2026-02-01T00:00:00Z' },
-      { id:4, title:'Sapiens', author:'Yuval Noah Harari', pages:443, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Englisch', rating:4, keywords:['Geschichte','Evolution'], quotes:[], notes:'Inspirierend.', cover_url:'', createdAt:'2025-01-05T00:00:00Z' },
-      { id:5, title:'Middlemarch', author:'George Eliot', pages:904, year:2025, status:'done', type:'Roman', format:'Buch', language:'Englisch', rating:5, keywords:['Klassiker'], quotes:[], notes:'', cover_url:'', createdAt:'2025-06-01T00:00:00Z' },
-      { id:6, title:'Resonanz', author:'Hartmut Rosa', pages:816, year:2025, status:'done', type:'Sachbuch', format:'Buch', language:'Deutsch', rating:4.5, keywords:['Soziologie','Moderne'], quotes:[{text:'Resonanz ist das Gegenteil von Entfremdung.',page:55}], notes:'', cover_url:'', createdAt:'2025-09-01T00:00:00Z' },
-      { id:7, title:'Factfulness', author:'Hans Rosling', pages:341, year:2026, status:'want_to_read', type:'Sachbuch', format:'Buch', language:'Englisch', rating:null, keywords:[], quotes:[], notes:'', cover_url:'', createdAt:'2026-03-01T00:00:00Z' },
-    ],
-    logs: (function(){
-      const logs = [];
-      let id = 10;
-      const today = new Date();
-      // Generate 90 days of logs for Karamasow (bookId 1)
-      for(let i = 0; i < 90; i++) {
-        const d = new Date(today); d.setDate(d.getDate() - i);
-        if(Math.random() > 0.25) {
-          const ds = d.toISOString().slice(0,10);
-          const pages = Math.floor(Math.random()*35)+8;
-          const pos = Math.min(987, 200 + (90-i)*4 + Math.floor(Math.random()*10));
-          logs.push({id:id++, date:ds, bookId:1, bookTitle:'Die Brüder Karamasow', pages, currentPosition:pos, positionType:'page'});
-        }
-      }
-      // Some older logs for book 2
-      for(let i = 90; i < 150; i++) {
-        const d = new Date(today); d.setDate(d.getDate() - i);
-        if(Math.random() > 0.3) {
-          const ds = d.toISOString().slice(0,10);
-          logs.push({id:id++, date:ds, bookId:2, bookTitle:'Thinking, Fast and Slow', pages:Math.floor(Math.random()*40)+10, currentPosition:Math.min(512,i*3), positionType:'page'});
-        }
-      }
-      return logs;
-    })()
-  };
-
-  // Mock friends (empty for demo)
-  window._friends = [];
-  window._friendState = null;
-
-  // Show app
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('loading-screen').style.display = 'flex';
-  setTimeout(() => {
-    window.initApp();
-  }, 600);
 };
 </script>
 
