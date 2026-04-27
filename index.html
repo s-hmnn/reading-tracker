@@ -3133,11 +3133,7 @@ async function generateBookSummary(bookId) {
     b.aiSummaryDate = Date.now();
     save();
 
-    display.innerHTML = renderAiSummaryHTML(b.aiSummary);
-    btn.textContent = 'KI-Analyse neu generieren';
-    toast('KI-Analyse gespeichert ✓');
-
-    // Konzept-Vorschläge holen (Soft-Fail: aiSummary bereits gespeichert)
+    // Konzept-Vorschläge holen (Soft-Fail: wenn fehlschlägt, läuft Summary trotzdem)
     try {
       const conceptRes = await fetch('https://reading-tracker-puce.vercel.app/api/generate-summary', {
         method: 'POST',
@@ -3162,11 +3158,14 @@ async function generateBookSummary(bookId) {
         });
         b.pendingConcepts = pending;
         save();
-        renderPendingConcepts();
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('Konzept-Vorschläge fehlgeschlagen:', e.message);
     }
+
+    display.innerHTML = renderAiSummaryHTML(b.aiSummary);
+    btn.textContent = 'KI-Analyse neu generieren';
+    toast('KI-Analyse gespeichert ✓');
   } catch(e) {
     display.innerHTML = '';
     toast('Fehler: ' + (e.message||'Unbekannter Fehler'));
