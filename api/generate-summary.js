@@ -44,7 +44,7 @@ module.exports = async function handler(req, res) {
       const notesContext = notes ? `\nNotizen: ${notes}` : '';
       const quotesContext = quotesText ? `\nZitate:\n${quotesText}` : '';
 
-      const raw = await callAnthropic('claude-haiku-4-5-20251001', 300,
+      const raw = await callAnthropic('claude-haiku-4-5-20251001', 500,
         `Schlage 5–8 prägnante deutschsprachige Keywords für das Buch "${title}" von ${author || 'unbekannt'} vor.${summaryContext}${notesContext}${quotesContext}
 
 Bereits vorhandene Keywords (diese NICHT vorschlagen): ${alreadyHave}
@@ -66,7 +66,7 @@ Antworte NUR mit diesem JSON (kein Markdown): {"keywords":["Begriff1","Begriff2"
       const notesContext = notes ? `\nNotizen: ${notes}` : '';
       const quotesContext = quotesText ? `\nZitate:\n${quotesText}` : '';
 
-      const raw = await callAnthropic('claude-haiku-4-5-20251001', 400,
+      const raw = await callAnthropic('claude-haiku-4-5-20251001', 800,
         `Du analysierst Notizen und Zitate eines Buchs. Buch: "${title}" von ${author || 'unbekannt'}.${notesContext}${quotesContext}
 
 Bestehende Konzepte des Nutzers:
@@ -88,7 +88,7 @@ Antworte NUR mit diesem JSON (kein Markdown): {"matchedConcepts":[1,2],"suggeste
       });
     }
 
-    const raw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
+    const raw = await callAnthropic('claude-haiku-4-5-20251001', 2500,
       `Analysiere "${title}" von ${author || 'unbekannt'} nach Adlers Lese-Methode.
 
 Zitate:
