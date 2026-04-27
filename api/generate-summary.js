@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { bookData, generateKeywords, existingSummary, existingKeywords } = req.body || {};
+  const { bookData, generateKeywords, generateConcepts, existingSummary, existingKeywords, existingConcepts } = req.body || {};
   if (!bookData) return res.status(400).json({ error: 'bookData required' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -57,6 +57,35 @@ Antworte NUR mit diesem JSON (kein Markdown): {"keywords":["Begriff1","Begriff2"
       const parsed = JSON.parse(cleaned);
       const suggested = (parsed.keywords || []).filter(k => !(existingKeywords || []).includes(k));
       return res.json({ suggestedKeywords: suggested });
+    }
+
+    if (generateConcepts) {
+      const conceptList = (existingConcepts || [])
+        .map(c => `- ID ${c.id}: "${c.name}"${c.definition ? ` (${c.definition.slice(0, 80)})` : ''}`)
+        .join('\n') || '(keine)';
+      const notesContext = notes ? `\nNotizen: ${notes}` : '';
+      const quotesContext = quotesText ? `\nZitate:\n${quotesText}` : '';
+
+      const raw = await callAnthropic('claude-haiku-4-5-20251001', 400,
+        `Du analysierst Notizen und Zitate eines Buchs. Buch: "${title}" von ${author || 'unbekannt'}.${notesContext}${quotesContext}
+
+Bestehende Konzepte des Nutzers:
+${conceptList}
+
+Identifiziere:
+1. Welche bestehenden Konzepte tatsächlich in diesem Buch behandelt werden (gib die ID-Liste zurück, max. 5)
+2. Welche neuen Konzepte vorgeschlagen werden sollten, die noch nicht existieren (max. 3)
+
+Sei zurückhaltend mit neuen Vorschlägen. Nur prägnante, eigenständige Begriffe – keine Allgemeinplätze.
+Antworte NUR mit diesem JSON (kein Markdown): {"matchedConcepts":[1,2],"suggestedNewConcepts":[{"name":"Begriff","reason":"Kurze Begründung"}]}`
+      );
+
+      const cleaned = extractJSON(raw);
+      const parsed = JSON.parse(cleaned);
+      return res.json({
+        matchedConcepts: parsed.matchedConcepts || [],
+        suggestedNewConcepts: parsed.suggestedNewConcepts || []
+      });
     }
 
     const raw = await callAnthropic('claude-haiku-4-5-20251001', 1000,
