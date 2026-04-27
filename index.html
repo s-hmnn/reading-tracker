@@ -74,7 +74,12 @@
       if(!b.format) b.format = '';
       if(!b.cover_url) b.cover_url = '';
       if(!b.hasOwnProperty('isbn')) b.isbn = '';
+      if(!Array.isArray(b.pendingConcepts)) b.pendingConcepts = [];
       return b;
+    });
+    s.concepts = s.concepts.map(c => {
+      if(!c.source) c.source = 'manual';
+      return c;
     });
     return s;
   }
@@ -1377,6 +1382,10 @@
         <div id="bm-ai-summary" class="bm-ai-summary"></div>
         <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Analyse generieren</button>
       </div>
+      <div class="bm-field" id="bm-concepts-section" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.8rem;display:none">
+        <label class="bm-label">Konzept-Vorschläge</label>
+        <div id="bm-pending-concepts"></div>
+      </div>
     </div>
     <div id="bmt-verlauf" class="bm-tab">
       <div id="bm-verlauf-stats"></div>
@@ -2652,6 +2661,7 @@ function openBookModal(id){
   }
   const delBtn=document.getElementById('bm-delete-btn');
   if(delBtn)delBtn.style.display=isNew?'none':'inline-flex';
+  renderPendingConcepts();
   document.getElementById('book-modal').style.display='flex';
   document.body.style.overflow='hidden';
 }
@@ -3006,6 +3016,62 @@ function importKindleHighlights() {
 }
 // ── End Kindle Import ────────────────────────────────────
 
+// ── Pending Concepts ─────────────────────────────────────
+function renderPendingConcepts(){
+  const wrap=document.getElementById('bm-pending-concepts');
+  const section=document.getElementById('bm-concepts-section');
+  const b=state.books.find(x=>x.id===_bmBookId);
+  if(!b||!b.pendingConcepts?.length){
+    if(section)section.style.display='none';
+    return;
+  }
+  if(section)section.style.display='block';
+  wrap.innerHTML=b.pendingConcepts.map((p,i)=>{
+    const isExisting=p.matchedConceptId!==null;
+    const label=isExisting?`${p.name} (verknüpfen)`:`+ ${p.name} (neu)`;
+    const title=p.reason||(isExisting?'Bestehendes Konzept':'Neues Konzept anlegen');
+    return `<span class="keyword-tag" style="cursor:pointer;margin:0.1rem"
+              onclick="acceptConcept(${i})" title="${title}">${label}</span>`;
+  }).join('')+`
+    <div style="margin-top:0.5rem;display:flex;gap:0.4rem">
+      <button class="btn btn-outline btn-sm" style="font-size:0.7rem" onclick="acceptAllConcepts()">Alle übernehmen</button>
+      <button class="btn btn-outline btn-sm" style="font-size:0.7rem" onclick="dismissAllConcepts()">Alle verwerfen</button>
+    </div>`;
+}
+
+function acceptConcept(index){
+  const b=state.books.find(x=>x.id===_bmBookId);
+  if(!b||!b.pendingConcepts?.[index])return;
+  const p=b.pendingConcepts[index];
+  let conceptId=p.matchedConceptId;
+  if(conceptId===null){
+    conceptId=state.nextId++;
+    state.concepts.push({id:conceptId,name:p.name,definition:'',notes:'',
+      linkedBooks:[],relatedConcepts:[],createdAt:Date.now(),source:'ai_suggested'});
+  }
+  if(!b.linkedConcepts)b.linkedConcepts=[];
+  if(!b.linkedConcepts.includes(conceptId))b.linkedConcepts.push(conceptId);
+  const c=state.concepts.find(x=>x.id===conceptId);
+  if(c&&!c.linkedBooks.includes(b.id))c.linkedBooks.push(b.id);
+  b.pendingConcepts.splice(index,1);
+  save();
+  renderPendingConcepts();
+  toast('Konzept verknüpft ✓','success');
+}
+
+function acceptAllConcepts(){
+  const b=state.books.find(x=>x.id===_bmBookId);
+  if(!b?.pendingConcepts?.length)return;
+  for(let i=b.pendingConcepts.length-1;i>=0;i--)acceptConcept(i);
+}
+
+function dismissAllConcepts(){
+  const b=state.books.find(x=>x.id===_bmBookId);
+  if(!b)return;
+  b.pendingConcepts=[];
+  save();
+  renderPendingConcepts();
+}
 // ── End Book Detail Modal ────────────────────────────────
 
 // ═══ SECTION: KI-Zusammenfassung ═══
@@ -3070,6 +3136,37 @@ async function generateBookSummary(bookId) {
     display.innerHTML = renderAiSummaryHTML(b.aiSummary);
     btn.textContent = 'KI-Analyse neu generieren';
     toast('KI-Analyse gespeichert ✓');
+
+    // Konzept-Vorschläge holen (Soft-Fail: aiSummary bereits gespeichert)
+    try {
+      const conceptRes = await fetch('https://reading-tracker-puce.vercel.app/api/generate-summary', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          generateConcepts: true,
+          bookData: { title: b.title, author: b.author, notes: b.notes, quotes: b.quotes || [] },
+          existingConcepts: state.concepts.map(c => ({ id: c.id, name: c.name, definition: c.definition || '' }))
+        })
+      });
+      if (conceptRes.ok) {
+        const { matchedConcepts, suggestedNewConcepts } = await conceptRes.json();
+        const pending = [];
+        (matchedConcepts || []).forEach(cid => {
+          if (!b.linkedConcepts?.includes(cid)) {
+            const c = state.concepts.find(x => x.id === cid);
+            if (c) pending.push({ name: c.name, matchedConceptId: cid, reason: '' });
+          }
+        });
+        (suggestedNewConcepts || []).forEach(s => {
+          pending.push({ name: s.name, matchedConceptId: null, reason: s.reason || '' });
+        });
+        b.pendingConcepts = pending;
+        save();
+        renderPendingConcepts();
+      }
+    } catch(e) {
+      console.warn('Konzept-Vorschläge fehlgeschlagen:', e.message);
+    }
   } catch(e) {
     display.innerHTML = '';
     toast('Fehler: ' + (e.message||'Unbekannter Fehler'));
@@ -3180,14 +3277,23 @@ function renderKBBookDetail(bookId){
         ${unlinked.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
       </select>
       <button class="btn btn-sky btn-sm" onclick="linkConceptToBook(${bookId})">Verknüpfen</button>
-    </div>`:''}`;
+    </div>`:''}
+    ${(()=>{const rb=getRelatedBooks(bookId);if(!rb.length)return '';return `
+    <div class="kb-section-title">Verwandte Bücher</div>
+    <div class="kb-books-scroll">
+      ${rb.map(({book,overlap})=>`
+        <div class="kb-book-ref" onclick="selectKBItem('book',${book.id})" title="${overlap} gemeinsame Konzepte">
+          <span class="kb-book-ref-title">${cap(book.title)}</span>
+          <span class="kb-book-ref-author">${book.author||''} · ${overlap} gemeinsam</span>
+        </div>`).join('')}
+    </div>`;})()}`;
 }
 
 function renderKBConceptDetail(conceptId){
   const c=state.concepts.find(x=>x.id===conceptId);
   if(!c)return;
   const linkedBooks=(c.linkedBooks||[]).map(bid=>state.books.find(b=>b.id===bid)).filter(Boolean);
-  const related=(c.relatedConcepts||[]).map(rid=>state.concepts.find(x=>x.id===rid)).filter(Boolean);
+  const related=getRelatedConcepts(c.id);
   document.getElementById('kb-detail').innerHTML=`
     <div class="kb-detail-title" contenteditable="true" onblur="saveConceptName(${c.id},this.textContent)">${c.name}</div>
     <div class="kb-section-title">Definition</div>
@@ -3205,7 +3311,7 @@ function renderKBConceptDetail(conceptId){
     ${related.length?`
     <div class="kb-section-title">Verwandte Konzepte</div>
     <div class="kb-concepts-chips">
-      ${related.map(r=>`<span class="kb-concept-chip" onclick="selectKBItem('concept',${r.id})">${r.name}</span>`).join('')}
+      ${related.map(({concept,overlap})=>`<span class="kb-concept-chip" onclick="selectKBItem('concept',${concept.id})" title="${overlap} gemeinsame Bücher">${concept.name}<span style="opacity:0.6;font-size:11px;margin-left:4px">·${overlap}</span></span>`).join('')}
     </div>`:''}
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <button class="btn btn-danger btn-sm" onclick="deleteConcept(${c.id})">Konzept löschen</button>
@@ -3275,6 +3381,38 @@ function deleteConcept(id){
   renderKBList();
 }
 // ── End Knowledge Base ────────────────────────────────────
+
+function getRelatedConcepts(conceptId, minOverlap = 2, limit = 5) {
+  const c = state.concepts.find(x => x.id === conceptId);
+  if (!c || !c.linkedBooks?.length) return [];
+  const cBooks = new Set(c.linkedBooks);
+  const scored = state.concepts
+    .filter(x => x.id !== conceptId)
+    .map(x => {
+      const overlap = (x.linkedBooks || []).filter(b => cBooks.has(b)).length;
+      return { concept: x, overlap };
+    })
+    .filter(s => s.overlap >= minOverlap)
+    .sort((a, b) => b.overlap - a.overlap)
+    .slice(0, limit);
+  return scored;
+}
+
+function getRelatedBooks(bookId, minOverlap = 2, limit = 5) {
+  const b = state.books.find(x => x.id === bookId);
+  if (!b || !b.linkedConcepts?.length) return [];
+  const bConcepts = new Set(b.linkedConcepts);
+  const scored = state.books
+    .filter(x => x.id !== bookId && x.linkedConcepts?.length)
+    .map(x => {
+      const overlap = (x.linkedConcepts || []).filter(c => bConcepts.has(c)).length;
+      return { book: x, overlap };
+    })
+    .filter(s => s.overlap >= minOverlap)
+    .sort((a, b) => b.overlap - a.overlap)
+    .slice(0, limit);
+  return scored;
+}
 
 // ═══ SECTION: App-Initialisierung ═══
 window.refreshAll=function(){renderTodayStats();renderLog();renderGoal();renderBooks();renderStats();checkYesterdayBanner();renderFriendActivityToday();};
