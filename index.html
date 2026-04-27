@@ -3197,19 +3197,23 @@ async function generateBookSummary(bookId) {
       });
       if (conceptRes.ok) {
         const { matchedConcepts, suggestedNewConcepts } = await conceptRes.json();
-        const pending = [];
-        (matchedConcepts || []).forEach(cid => {
-          if (!b.linkedConcepts?.includes(cid)) {
-            const c = state.concepts.find(x => x.id === cid);
-            if (c) pending.push({ name: c.name, matchedConceptId: cid, reason: '' });
-          }
-        });
-        (suggestedNewConcepts || []).forEach(s => {
-          pending.push({ name: s.name, matchedConceptId: null, reason: s.reason || '' });
-        });
-        b.pendingConcepts = pending;
-        save();
-        renderPendingConcepts();
+        // Buch frisch aus state holen — _state kann durch Realtime-Sync ersetzt worden sein
+        const bookNow = state.books.find(x => x.id === bookId);
+        if (bookNow) {
+          const pending = [];
+          (matchedConcepts || []).forEach(cid => {
+            if (!bookNow.linkedConcepts?.includes(cid)) {
+              const c = state.concepts.find(x => x.id === cid);
+              if (c) pending.push({ name: c.name, matchedConceptId: cid, reason: '' });
+            }
+          });
+          (suggestedNewConcepts || []).forEach(s => {
+            pending.push({ name: s.name, matchedConceptId: null, reason: s.reason || '' });
+          });
+          bookNow.pendingConcepts = pending;
+          save();
+          renderPendingConcepts();
+        }
       }
     } catch (e) {
       console.warn('Konzept-Vorschläge fehlgeschlagen:', e.message);
