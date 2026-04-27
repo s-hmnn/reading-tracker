@@ -1383,7 +1383,7 @@
         <div id="bm-ai-summary" class="bm-ai-summary"></div>
         <button id="bm-ai-btn" class="btn btn-outline btn-sm" style="margin-top:0.4rem" onclick="generateBookSummary(_bmBookId)">KI-Analyse generieren</button>
       </div>
-      <div class="bm-field" id="bm-concepts-section" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.8rem;display:none">
+      <div class="bm-field" id="bm-concepts-section" style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.8rem">
         <label class="bm-label">Konzept-Vorschläge</label>
         <div id="bm-pending-concepts"></div>
       </div>
@@ -3070,13 +3070,12 @@ function importKindleHighlights() {
 // ── Pending Concepts ─────────────────────────────────────
 function renderPendingConcepts(){
   const wrap=document.getElementById('bm-pending-concepts');
-  const section=document.getElementById('bm-concepts-section');
   const b=state.books.find(x=>x.id===_bmBookId);
+  if(!wrap)return;
   if(!b||!b.pendingConcepts?.length){
-    if(section)section.style.display='none';
+    wrap.innerHTML=`<div style="font-size:0.78rem;color:var(--text-muted);font-style:italic">Noch keine Vorschläge — werden nach „KI-Analyse generieren" hier angezeigt.</div>`;
     return;
   }
-  if(section)section.style.display='block';
   wrap.innerHTML=b.pendingConcepts.map((p,i)=>{
     const isExisting=p.matchedConceptId!==null;
     const label=isExisting?`${p.name} (verknüpfen)`:`+ ${p.name} (neu)`;
