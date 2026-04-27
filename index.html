@@ -1559,6 +1559,31 @@ function recalcPagesAfter(bookId,fromDate){
   }
 }
 
+// Prüft, ob ein neuer Eintrag mit einem späteren Eintrag inkonsistent wäre
+// (höhere Position für früheres Datum als für späteres → Lesefortschritt würde rückwärts laufen)
+function checkPositionConflict(bookId,date,currentPosition,positionType){
+  const book=state.books.find(b=>b.id===bookId);
+  const after=state.logs.filter(l=>l.bookId===bookId&&l.date>date&&l.currentPosition!=null);
+  if(!after.length)return null;
+  const toPages=(pos,type)=>(type==='percent'&&book?.pages)?Math.round(pos*book.pages/100):pos;
+  const newPages=toPages(currentPosition,positionType);
+  let lowest=null;
+  for(const l of after){
+    const p=toPages(l.currentPosition,l.positionType||'page');
+    if(lowest===null||p<lowest.pages)lowest={pages:p,log:l};
+  }
+  if(lowest&&newPages>lowest.pages){
+    return{laterDate:lowest.log.date,laterPosition:lowest.log.currentPosition,laterType:lowest.log.positionType||'page'};
+  }
+  return null;
+}
+
+function confirmPositionConflict(c){
+  const fmt=`${c.laterPosition}${c.laterType==='percent'?'%':' S.'}`;
+  const dd=c.laterDate.slice(8,10)+'.'+c.laterDate.slice(5,7)+'.'+c.laterDate.slice(0,4);
+  return confirm(`Achtung: Am ${dd} ist die Position bereits ${fmt} — niedriger als der neue Eintrag.\n\nDas würde bedeuten, dass dein Lesefortschritt zwischen den beiden Daten zurückgegangen ist. Trotzdem speichern?`);
+}
+
 function togglePositionMode(){
   positionMode=(positionMode==='page')?'percent':'page';
   const btn=document.getElementById('pos-toggle');
@@ -1680,6 +1705,8 @@ function quickLogYesterday(){
     const prev=last&&last.type==='page'?last.position:0;
     pages=Math.max(0,currentPosition-prev);
   }
+  const conflict=checkPositionConflict(bookId,date,currentPosition,positionType);
+  if(conflict&&!confirmPositionConflict(conflict))return;
   if(book&&book.status==='want_to_read')book.status='reading';
   state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?.title||'',pages,currentPosition,positionType});
   save();toast('Gestern eingetragen ✓','success');
@@ -1713,6 +1740,8 @@ function addEntry(){
     deltaPages=currentPosition-lastPage;
     if(deltaPages<=0){toast('Position muss größer als zuletzt sein!');return;}
   }
+  const conflict=checkPositionConflict(bookId,date,currentPosition,positionType);
+  if(conflict&&!confirmPositionConflict(conflict))return;
   if(book&&book.status==='want_to_read'){book.status='reading';}
   state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?book.title:'Unbekannt',pages:deltaPages,currentPosition,positionType});
   recalcPagesAfter(bookId,date);
@@ -2831,14 +2860,31 @@ function renderBookVerlauf(bookId){
     const weightFor=t=>t==='session'?'400':'500';
     timelineEl.innerHTML=`<div style="position:relative;padding-left:1.4rem">`
       +`<div style="position:absolute;left:0.4rem;top:0.5rem;bottom:0.5rem;width:1.5px;background:var(--border)"></div>`
-      +events.map(ev=>`<div style="position:relative;margin-bottom:0.8rem">`
+      +events.map(ev=>{
+        const canDelete=(ev.type==='session'||ev.type==='started');
+        const delBtn=canDelete?`<button onclick="deleteVerlaufEntry('${ev.date}',${bookId})" title="Eintrag löschen" style="position:absolute;right:0;top:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0 0.3rem;line-height:1;opacity:0.5">×</button>`:'';
+        return `<div style="position:relative;margin-bottom:0.8rem;padding-right:1.5rem">`
         +`<div style="position:absolute;left:-1.38rem;top:0.1rem;width:1rem;height:1rem;background:var(--card);border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.5rem;color:${colorFor(ev.type)}">${ev.icon}</div>`
         +`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);line-height:1.3">${fmtDate(ev.date)}</div>`
         +`<div style="font-size:0.78rem;font-weight:${weightFor(ev.type)};color:${colorFor(ev.type)};line-height:1.3">${ev.label}</div>`
         +(ev.detail?`<div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted)">${ev.detail}</div>`:'')
-        +`</div>`).join('')
+        +delBtn
+        +`</div>`;
+      }).join('')
       +`</div>`;
   }
+}
+
+function deleteVerlaufEntry(date,bookId){
+  if(!confirm('Eintrag löschen? Alle Leseeinträge dieses Buches an diesem Tag werden entfernt.'))return;
+  state.logs=state.logs.filter(l=>!(l.date===date&&l.bookId===bookId));
+  recalcPagesAfter(bookId,date);
+  save();
+  renderBookVerlauf(bookId);
+  renderLog();
+  renderTodayStats();
+  renderBooks();
+  toast('Eintrag gelöscht ✓','success');
 }
 // ── Quotes ───────────────────────────────────────────────
 function renderQuotesList(){
@@ -3639,6 +3685,8 @@ function addMiniLogEntry(){
     const prev=last&&last.type==='page'?last.position:0;
     pages=Math.max(0,currentPosition-prev);
   }
+  const conflict=checkPositionConflict(bookId,date,currentPosition,positionType);
+  if(conflict&&!confirmPositionConflict(conflict))return;
   const book=state.books.find(b=>b.id===bookId);
   if(book&&book.status==='want_to_read')book.status='reading';
   state.logs.push({id:state.nextId++,date,bookId,bookTitle:book?.title||'',pages,currentPosition,positionType});
