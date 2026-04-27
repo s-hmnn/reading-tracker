@@ -81,6 +81,12 @@
       if(!c.source) c.source = 'manual';
       return c;
     });
+    // Cleanup verwaister Referenzen (Bücher, die nicht mehr existieren)
+    const validBookIds = new Set(s.books.map(b => b.id));
+    s.logs = s.logs.filter(l => validBookIds.has(parseInt(l.bookId)));
+    s.concepts.forEach(c => {
+      c.linkedBooks = (c.linkedBooks || []).filter(bid => validBookIds.has(bid));
+    });
     return s;
   }
 
@@ -2029,7 +2035,10 @@ function exportToExcel(){
 
 function deleteBook(id,e){
   e.stopPropagation();if(!confirm('Buch löschen?'))return;
-  state.books=state.books.filter(b=>b.id!==id);save();renderBooks();populateBookSelect();
+  state.books=state.books.filter(b=>b.id!==id);
+  state.logs=state.logs.filter(l=>parseInt(l.bookId)!==id);
+  state.concepts.forEach(c=>{c.linkedBooks=(c.linkedBooks||[]).filter(bid=>bid!==id);});
+  save();renderBooks();populateBookSelect();
 }
 function deleteBookFromModal(){
   document.getElementById('delete-book-modal').style.display='flex';
@@ -2045,6 +2054,7 @@ function confirmDeleteFromModal(){
   if(id===null||id===undefined)return;
   state.books=state.books.filter(b=>b.id!==id);
   state.logs=state.logs.filter(l=>parseInt(l.bookId)!==id);
+  state.concepts.forEach(c=>{c.linkedBooks=(c.linkedBooks||[]).filter(bid=>bid!==id);});
   save();renderBooks();populateBookSelect();
   toast('Buch gelöscht');
 }
@@ -3158,6 +3168,7 @@ async function generateBookSummary(bookId) {
         });
         b.pendingConcepts = pending;
         save();
+        renderPendingConcepts();
       }
     } catch (e) {
       console.warn('Konzept-Vorschläge fehlgeschlagen:', e.message);
